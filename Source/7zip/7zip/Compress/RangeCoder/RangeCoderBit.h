@@ -19,7 +19,7 @@
 #define __COMPRESS_RANGECODER_BIT_H
 
 #include "RangeCoder.h"
-
+namespace nsis7zip {
 namespace NCompress {
 namespace NRangeCoder {
 
@@ -131,5 +131,5 @@ public:
 };
 
 }}
-
+}
 #endif

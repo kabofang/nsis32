@@ -25,7 +25,7 @@
 #include "../RangeCoder/RangeCoderBitTree.h"
 
 #include "LZMA.h"
-
+namespace nsis7zip {
 namespace NCompress {
 namespace NLZMA {
 
@@ -422,5 +422,5 @@ public:
 };
 
 }}
-
+}
 #endif

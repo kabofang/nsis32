@@ -21,7 +21,7 @@
 #include "MyWindows.h"
 
 #define RINOK(x) { HRESULT __result_ = (x); if(__result_ != S_OK) return __result_; }
-
+namespace nsis7zip {
 template <class T>
 class CMyComPtr
 {
@@ -214,5 +214,5 @@ STDMETHOD_(ULONG, Release)() { if (--__m_RefCount != 0) return __m_RefCount; \
   MY_QUERYINTERFACE_ENTRY(i4) \
   MY_QUERYINTERFACE_ENTRY(i5) \
   )
-
+}
 #endif

@@ -19,7 +19,7 @@
 
 // #include "BinTreeMF.h"
 #include "BinTreeMain.h"
-
+using namespace nsis7zip;
 namespace BT_NAMESPACE {
 
 void CInTree2::BeforeMoveBlock()

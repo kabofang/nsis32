@@ -55,7 +55,7 @@
 #ifdef COMPRESS_MF_MT
 #include "../LZ/MT/MT.h"
 #endif
-
+namespace nsis7zip {
 namespace NCompress {
 namespace NLZMA {
 
@@ -1578,3 +1578,4 @@ void CEncoder::FillAlignPrices()
 }
 
 }}
+}

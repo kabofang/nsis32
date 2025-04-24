@@ -22,7 +22,7 @@
 
 #include <stddef.h>
 #include "Types.h"
-
+namespace nsis7zip {
 class CCRC
 {
   UInt32 _value;
@@ -49,5 +49,5 @@ public:
     return (CalculateDigest(data, size) == digest);
   }
 };
-
+}
 #endif

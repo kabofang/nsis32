@@ -137,7 +137,7 @@ int CLZMA::ConvertError(HRESULT result)
 
 CLZMA::CLZMA(): _encoder(NULL)
 {
-  _encoder = new NCompress::NLZMA::CEncoder();
+  _encoder = new nsis7zip::NCompress::NLZMA::CEncoder();
   _encoder->SetWriteEndMarkerMode(true);
 #ifdef _WIN32
   hCompressionThread = NULL;

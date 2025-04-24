@@ -24,7 +24,7 @@
 // #include <xmmintrin.h>
 // It's for prefetch
 // But prefetch doesn't give big gain in K8.
-
+using namespace nsis7zip;
 namespace BT_NAMESPACE {
 
 #ifdef HASH_ARRAY_2
@@ -77,7 +77,7 @@ CMatchFinder::CMatchFinder():
 
 void CMatchFinder::FreeThisClassMemory()
 {
-  BigFree(_hash);
+  nsis7zip::BigFree(_hash);
   _hash = 0;
 }
 
@@ -148,7 +148,7 @@ STDMETHODIMP CMatchFinder::Create(UInt32 historySize, UInt32 keepAddBufferBefore
     size_t sizeInBytes = (size_t)numItems * sizeof(CIndex);
     if (sizeInBytes / sizeof(CIndex) != numItems)
       return E_OUTOFMEMORY;
-    _hash = (CIndex *)BigAlloc(sizeInBytes);
+    _hash = (CIndex *)nsis7zip::BigAlloc(sizeInBytes);
     _son = _hash + _hashSizeSum;
     if (_hash != 0)
       return S_OK;

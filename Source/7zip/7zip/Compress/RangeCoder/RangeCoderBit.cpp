@@ -15,10 +15,10 @@
  * warranty.
  */
 
-#include "StdAfx.h"
+//#include "StdAfx.h"
 
 #include "RangeCoderBit.h"
-
+namespace nsis7zip {
 namespace NCompress {
 namespace NRangeCoder {
 
@@ -93,3 +93,4 @@ void CPriceTables::Init()
 }
 
 }}
+}

@@ -22,6 +22,8 @@
 
 #include <stddef.h>
 
+namespace nsis7zip{
+
 void *MyAlloc(size_t size) throw();
 void MyFree(void *address) throw();
 
@@ -42,5 +44,5 @@ void BigFree(void *address) throw();
 #define BigFree(address) MyFree(address)
 
 #endif
-
+}
 #endif

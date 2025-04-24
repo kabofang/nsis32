@@ -41,10 +41,10 @@ class CLZMA:
   public ICompressor,
   public ISequentialInStream,
   public ISequentialOutStream,
-  public CMyUnknownImp
+  public nsis7zip::CMyUnknownImp
 {
 private:
-  NCompress::NLZMA::CEncoder *_encoder;
+	nsis7zip::NCompress::NLZMA::CEncoder *_encoder;
 
 #ifdef _WIN32
   HANDLE hCompressionThread;

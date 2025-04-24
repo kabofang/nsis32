@@ -17,7 +17,7 @@
 
 #ifndef __IMATCHFINDER_H
 #define __IMATCHFINDER_H
-
+namespace nsis7zip {
 struct IInWindowStream: public IUnknown
 {
   STDMETHOD(SetStream)(ISequentialInStream *inStream) PURE;
@@ -43,5 +43,5 @@ struct IMatchFinderSetNumPasses
 {
   virtual void SetNumPasses(UInt32 numPasses) PURE;
 };
-
+}
 #endif

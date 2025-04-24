@@ -20,7 +20,7 @@
 
 #include "../../IStream.h"
 #include "../../Common/OutBuffer.h"
-
+namespace nsis7zip {
 #ifndef _NO_EXCEPTIONS
 typedef COutBufferException CLZOutWindowException;
 #endif
@@ -67,5 +67,5 @@ public:
     return _buffer[pos]; 
   }
 };
-
+}
 #endif

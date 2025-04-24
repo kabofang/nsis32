@@ -19,7 +19,7 @@
 
 #include "../../Common/MyCom.h"
 #include "StreamUtils.h"
-
+namespace nsis7zip {
 HRESULT ReadStream(ISequentialInStream *stream, void *data, UInt32 size, UInt32 *processedSize)
 {
   if (processedSize != 0)
@@ -55,5 +55,5 @@ HRESULT WriteStream(ISequentialOutStream *stream, const void *data, UInt32 size,
     if (processedSizeLoc == 0)
       break;
   }
-  return S_OK;
+  return S_OK;}
 }

@@ -17,7 +17,7 @@
 
 #ifndef __COMMON_DEFS_H
 #define __COMMON_DEFS_H
-
+namespace nsis7zip {
 template <class T> inline T MyMin(T a, T b)
   {  return a < b ? a : b; }
 template <class T> inline T MyMax(T a, T b)
@@ -31,5 +31,5 @@ inline int BoolToInt(bool value)
 
 inline bool IntToBool(int value)
   { return (value != 0); }
-
+}
 #endif

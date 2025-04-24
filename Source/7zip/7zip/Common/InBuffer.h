@@ -20,7 +20,7 @@
 
 #include "../IStream.h"
 #include "../../Common/MyCom.h"
-
+namespace nsis7zip {
 #ifndef _NO_EXCEPTIONS
 class CInBufferException
 {
@@ -87,5 +87,5 @@ public:
   UInt64 GetProcessedSize() const { return _processedSize + (_buffer - _bufferBase); }
   bool WasFinished() const { return _wasFinished; }
 };
-
+}
 #endif

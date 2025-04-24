@@ -20,10 +20,10 @@
 #include "LZInWindow.h"
 #include "../../../Common/MyCom.h"
 #include "../../../Common/Alloc.h"
-
+namespace nsis7zip {
 void CLZInWindow::Free()
 {
-  ::BigFree(_bufferBase);
+  nsis7zip::BigFree(_bufferBase);
   _bufferBase = 0;
 }
 
@@ -37,7 +37,7 @@ bool CLZInWindow::Create(UInt32 keepSizeBefore, UInt32 keepSizeAfter, UInt32 kee
     Free();
     _blockSize = blockSize;
     if (_blockSize != 0)
-      _bufferBase = (Byte *)::BigAlloc(_blockSize);
+      _bufferBase = (Byte *)nsis7zip::BigAlloc(_blockSize);
   }
   _pointerToLastSafePosition = _bufferBase + _blockSize - keepSizeAfter;
   if (_blockSize == 0)
@@ -117,4 +117,5 @@ void CLZInWindow::MoveBlock()
   UInt32 numBytes = (UInt32)(_buffer - _bufferBase) + _streamPos -  offset;
   memmove(_bufferBase, _bufferBase + offset, numBytes);
   _buffer -= offset;
+}
 }

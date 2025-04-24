@@ -17,7 +17,7 @@
 
 #ifndef __LZMA_H
 #define __LZMA_H
-
+namespace nsis7zip {
 namespace NCompress {
 namespace NLZMA {
 
@@ -93,5 +93,5 @@ const int kNumLitContextBitsMax = 8;
 const int kNumMoveBits = 5;
 
 }}
-
+}
 #endif

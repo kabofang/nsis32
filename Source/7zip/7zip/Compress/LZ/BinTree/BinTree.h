@@ -17,7 +17,7 @@
 
 #include "../LZInWindow.h"
 #include "../IMatchFinder.h"
- 
+using namespace nsis7zip;
 namespace BT_NAMESPACE {
 
 typedef UInt32 CIndex;

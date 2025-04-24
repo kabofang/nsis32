@@ -20,7 +20,7 @@
 
 #include "../IStream.h"
 #include "../../Common/MyCom.h"
-
+namespace nsis7zip {
 #ifndef _NO_EXCEPTIONS
 struct COutBufferException
 {
@@ -75,5 +75,5 @@ public:
 
   UInt64 GetProcessedSize() const;
 };
-
+}
 #endif

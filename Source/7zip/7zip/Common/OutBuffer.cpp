@@ -20,7 +20,7 @@
 #include "OutBuffer.h"
 
 #include "../../Common/Alloc.h"
-
+namespace nsis7zip {
 bool COutBuffer::Create(UInt32 bufferSize)
 {
   const UInt32 kMinBlockSize = 1;
@@ -30,13 +30,13 @@ bool COutBuffer::Create(UInt32 bufferSize)
     return true;
   Free();
   _bufferSize = bufferSize;
-  _buffer = (Byte *)::MidAlloc(bufferSize);
+  _buffer = (Byte *)nsis7zip::MidAlloc(bufferSize);
   return (_buffer != 0);
 }
 
 void COutBuffer::Free()
 {
-  ::MidFree(_buffer);
+  nsis7zip::MidFree(_buffer);
   _buffer = 0;
 }
 
@@ -128,4 +128,5 @@ void COutBuffer::FlushWithCheck()
   if (result != S_OK)
     throw COutBufferException(result);
   #endif
+}
 }

@@ -20,7 +20,7 @@
 #include "InBuffer.h"
 
 #include "../../Common/Alloc.h"
-
+namespace nsis7zip {
 CInBuffer::CInBuffer(): 
   _buffer(0), 
   _bufferLimit(0), 
@@ -38,13 +38,13 @@ bool CInBuffer::Create(UInt32 bufferSize)
     return true;
   Free();
   _bufferSize = bufferSize;
-  _bufferBase = (Byte *)::MidAlloc(bufferSize);
+  _bufferBase = (Byte *)nsis7zip::MidAlloc(bufferSize);
   return (_bufferBase != 0);
 }
 
 void CInBuffer::Free()
 {
-  ::MidFree(_bufferBase);
+  nsis7zip::MidFree(_bufferBase);
   _bufferBase = 0;
 }
 
@@ -92,4 +92,5 @@ Byte CInBuffer::ReadBlock2()
   if(!ReadBlock())
     return 0xFF;
   return *_buffer++;
+}
 }

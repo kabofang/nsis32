@@ -20,7 +20,7 @@
 #include "StdAfx.h"
 
 #include "CRC.h"
-
+namespace nsis7zip {
 static const UInt32 kCRCPoly = 0xEDB88320;
 
 UInt32 CCRC::Table[256];
@@ -75,4 +75,5 @@ void CCRC::Update(const void *data, size_t size)
   for (; size > 0 ; size--, p++)
     v = Table[((Byte)(v)) ^ *p] ^ (v >> 8);
   _value = v;
+}
 }

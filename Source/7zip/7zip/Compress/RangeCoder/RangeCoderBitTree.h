@@ -20,7 +20,7 @@
 
 #include "RangeCoderBit.h"
 #include "RangeCoderOpt.h"
-
+namespace nsis7zip {
 namespace NCompress {
 namespace NRangeCoder {
 
@@ -172,5 +172,5 @@ UInt32 ReverseBitTreeDecode(CBitDecoder<numMoveBits> *Models,
 }
 
 }}
-
+}
 #endif

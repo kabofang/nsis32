@@ -20,7 +20,7 @@
 
 #include "../../../ICoder.h"
 #include "BinTree.h"
-
+using namespace nsis7zip;
 namespace BT_NAMESPACE {
 
 #undef kIDByte

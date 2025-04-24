@@ -19,7 +19,7 @@
 
 #include "../../../Common/Alloc.h"
 #include "LZOutWindow.h"
-
+namespace nsis7zip {
 void CLZOutWindow::Init(bool solid)
 {
   if(!solid)
@@ -30,3 +30,4 @@ void CLZOutWindow::Init(bool solid)
 }
 
 
+}

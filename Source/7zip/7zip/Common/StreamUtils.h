@@ -19,8 +19,8 @@
 #define __STREAMUTILS_H
 
 #include "../IStream.h"
-
+namespace nsis7zip {
 HRESULT ReadStream(ISequentialInStream *stream, void *data, UInt32 size, UInt32 *processedSize);
 HRESULT WriteStream(ISequentialOutStream *stream, const void *data, UInt32 size, UInt32 *processedSize);
-
+}
 #endif

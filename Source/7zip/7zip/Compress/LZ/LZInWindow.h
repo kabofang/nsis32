@@ -19,7 +19,7 @@
 #define __LZ_IN_WINDOW_H
 
 #include "../../IStream.h"
-
+namespace nsis7zip {
 class CLZInWindow
 {
   Byte *_bufferBase; // pointer to buffer with data
@@ -98,5 +98,5 @@ public:
     return (reserv <= numCheckBytes);
   }
 };
-
+}
 #endif

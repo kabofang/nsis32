@@ -36,7 +36,7 @@ int g_allocCount = 0;
 int g_allocCountMid = 0;
 int g_allocCountBig = 0;
 #endif
-
+namespace nsis7zip{
 void *MyAlloc(size_t size) throw()
 {
   if (size == 0)
@@ -134,3 +134,4 @@ void BigFree(void *address) throw()
 }
 
 #endif
+}

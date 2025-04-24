@@ -20,7 +20,7 @@
 
 #include "../../Common/InBuffer.h"
 #include "../../Common/OutBuffer.h"
-
+namespace nsis7zip {
 namespace NCompress {
 namespace NRangeCoder {
 
@@ -216,5 +216,5 @@ public:
 };
 
 }}
-
+}
 #endif
