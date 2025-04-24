@@ -2428,7 +2428,7 @@ int CEXEBuild::doCommand(int which_token, LineParser &line)
         if (!_tcsicmp(line.gettoken_str(a),_T("/FINAL")))
           build_compressor_final = true, a++;
         else if (!_tcsicmp(line.gettoken_str(a),_T("/SOLID")))
-          build_compress_whole = true, a++;
+          a++;
         else
           PRINTHELP();
       }
@@ -5232,7 +5232,10 @@ int CEXEBuild::doCommand(int which_token, LineParser &line)
 
 #ifdef NSIS_SUPPORT_FILE
 int CEXEBuild::do_add_7zfile(const tstring& path, int recurse, const std::set<tstring>& excluded) {
-  file_7z_.AddSrcFile(path, recurse, excluded);
+  int size = file_7z_.AddSrcFile(path, recurse, excluded);
+  if (size > 0) {
+    section_add_size_kb((size + 1023) / 1024);
+  }
   return PS_OK;
 }
 

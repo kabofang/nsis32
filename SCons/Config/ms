@@ -45,7 +45,7 @@ if msvs_version >= 11.0:
 def setoptimizeflags(env):
 	if not env['DEBUG']:
 		env.Append(CCFLAGS = ['/Gy'])
-		env.Append(LINKFLAGS = ['/OPT:NOREF'])
+		env.Append(LINKFLAGS = ['/OPT:REF'])
 		env.Append(LINKFLAGS = ['/OPT:ICF,9'])
 		#if msvs_version >= 7.0:
 		#	env.Append(CCFLAGS = ['/GL']) # FIXME: Creates problems with memset in VS v8.0 (CL v14.00)

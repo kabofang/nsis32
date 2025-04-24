@@ -611,9 +611,7 @@ static int NSISCALL ExecuteEntry(entry *entry_, HWND hwndProgress)
           wchar_t* dst_path = malloc((lenth + 1) * sizeof(wchar_t));
           memset(dst_path, 0, (lenth + 1) * sizeof(wchar_t));
           memcpy(dst_path, buf0, (lenth - 10) * sizeof(wchar_t));//-install.7z
-          //wchar_t* cmd = BuildExtractCommandLineW(buf0, dst_path);
           Extract7z(buf0, dst_path, hwndProgress);
-          //Main2CustomNoExcept(1, (char**)cmd);
           DeleteFile(buf0);
         }
         if (ret < 0)

@@ -203,7 +203,8 @@ Help(opts.GenerateHelpText(defenv))
 if defenv['TARGET_ARCH'] != 'x86':
 	defenv['UNICODE'] = True
 
-defenv['DEBUG'] = 1
+# defenv['DEBUG'] = 1
+
 defenv['UNICODE'] = True
 
 if defenv['DEBUG']:
@@ -722,7 +723,8 @@ if defenv['PLATFORM'] == 'win32':
 else:
 	defenv.DistributeBin(makensis, alias='install-compiler')
 
-defenv.DistributeW32Bin('#/Contrib/7z.exe', names='7z.exe')
+defenv.DistributeW32Bin('#/Contrib/7zbin/7z.exe', names='7z.exe')
+defenv.DistributeW32Bin('#/Contrib/7zbin/config7z.ini', names='config7z.ini')
 
 ######################################################################
 #######  Plug-ins                                                  ###
