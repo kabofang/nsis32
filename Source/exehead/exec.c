@@ -29,6 +29,22 @@
 #include "resource.h"
 #include "api.h"
 #include "../tchar.h"
+#include "../../Contrib/7-Zip/Contrib/nsis7z/CPP/7zip/UI/NSIS/Extract7z.h"
+
+BOOL EndsWithInstall7z(const TCHAR* buf0) {
+  const TCHAR* suffix = _T("install.7z");
+  size_t buf_len = _tcslen(buf0);
+  size_t suffix_len = _tcslen(suffix);
+
+  if (buf_len >= suffix_len) {
+    return (_tcsncmp(
+      buf0 + buf_len - suffix_len,
+      suffix,
+      suffix_len
+    ) == 0);
+  }
+  return FALSE;
+}
 
 #define EXEC_ERROR 0x7FFFFFFF
 
@@ -60,7 +76,7 @@ extra_parameters plugin_extra_parameters = {
 HRESULT g_hres;
 #endif
 
-static int NSISCALL ExecuteEntry(entry *entry_);
+static int NSISCALL ExecuteEntry(entry *entry_, HWND hwndProgress);
 
 /**
  * If v is negative, then the address to resolve is actually
@@ -82,7 +98,7 @@ int NSISCALL ExecuteCodeSegment(int pos, HWND hwndProgress)
   {
     int rv;
     if (g_entries[pos].which == EW_RET) return 0;
-    rv=ExecuteEntry(g_entries + pos);
+    rv=ExecuteEntry(g_entries + pos, hwndProgress);
     if (rv == EXEC_ERROR) return EXEC_ERROR;
 
     rv=resolveaddr(rv);
@@ -100,7 +116,9 @@ int NSISCALL ExecuteCodeSegment(int pos, HWND hwndProgress)
     {
       extern int progress_bar_pos, progress_bar_len;
       progress_bar_pos+=rv;
-      SendMessage(hwndProgress,PBM_SETPOS,MulDiv(progress_bar_pos,30000,progress_bar_len),0);
+      if (progress_bar_len && progress_bar_pos != progress_bar_len) {
+        SendMessage(hwndProgress, PBM_SETPOS, MulDiv(progress_bar_pos, 15000, progress_bar_len), 0);
+      }
     }
   }
   return 0;
@@ -230,7 +248,7 @@ static LONG NSISCALL RegDeleteScriptKey(int RootKey, LPCTSTR SubKey, REGSAM Samv
 // returns EXEC_ERROR on error
 // returns 0, advance position by 1
 // otherwise, returns new_position+1
-static int NSISCALL ExecuteEntry(entry *entry_)
+static int NSISCALL ExecuteEntry(entry *entry_, HWND hwndProgress)
 {
   TCHAR *buf0 = g_bufs[0];
   TCHAR *buf1 = g_bufs[1];
@@ -581,14 +599,23 @@ static int NSISCALL ExecuteEntry(entry *entry_)
           ret=GetCompressedDataFromDataBlock(parm2,hOut);
           g_exec_flags.status_update--;
         }
-
         log_printf3(_T("File: wrote %d to \"%s\""),ret,buf0);
 
         if (parm3 != 0xffffffff || parm4 != 0xffffffff)
           SetFileTime(hOut,(FILETIME*)(lent.offsets+3),NULL,(FILETIME*)(lent.offsets+3));
 
+        FlushFileBuffers(hOut);
         CloseHandle(hOut);
-
+        if (EndsWithInstall7z(buf0)) {
+          int lenth = mystrlen(buf0);
+          wchar_t* dst_path = malloc((lenth + 1) * sizeof(wchar_t));
+          memset(dst_path, 0, (lenth + 1) * sizeof(wchar_t));
+          memcpy(dst_path, buf0, (lenth - 10) * sizeof(wchar_t));//-install.7z
+          //wchar_t* cmd = BuildExtractCommandLineW(buf0, dst_path);
+          Extract7z(buf0, dst_path, hwndProgress);
+          //Main2CustomNoExcept(1, (char**)cmd);
+          DeleteFile(buf0);
+        }
         if (ret < 0)
         {
           if (ret == -2)

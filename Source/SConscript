@@ -30,6 +30,7 @@ makensis_files = Split("""
 	util.cpp
 	winchar.cpp
 	writer.cpp
+	file7z.cpp
 """)
 
 bzip2_files = Split("""

@@ -34,6 +34,7 @@
 
 #include "exehead/fileform.h"
 #include "exehead/config.h"
+#include "file7z.h"
 
 #include "tstring.h"
 #include <set>
@@ -339,6 +340,7 @@ class CEXEBuild {
     bool MacroExists(const TCHAR *macroname) { return !!GetMacro(macroname); }
     LANGID ParseLangIdParameter(const LineParser&line, int token);
     int LoadLicenseFile(const TCHAR *file, TCHAR** pdata, const TCHAR *cmdname, WORD AnsiCP);
+  public:
 #ifdef NSIS_FIX_DEFINES_IN_STRINGS
     void ps_addtoline(const TCHAR *str, GrowBuf &linedata, StringList &hist, bool bIgnoreDefines = false);
 #else
@@ -346,6 +348,7 @@ class CEXEBuild {
 #endif
     int doParse(int verbosity, const TCHAR *fmt, ...);
     int doParse(const TCHAR *str);
+  private:
     int doCommand(int which_token, LineParser &line);
     TCHAR m_templinebuf[MAX_LINELENGTH]; // Buffer used by parseScript() & doCommand(), not recursion safe!
     int add_flag_instruction_entry(int which_token, int opcode, LineParser &line, int offset, int data = 0);
@@ -353,7 +356,8 @@ class CEXEBuild {
     int do_add_file(const TCHAR *lgss, int attrib, int recurse, int *total_files, const TCHAR 
       *name_override=0, int generatecode=1, int *data_handle=0, 
       const std::set<tstring>& excluded=std::set<tstring>(), 
-      const tstring& basedir=tstring(_T("")), bool dir_created=false);
+      const tstring& basedir=tstring(_T("")), bool dir_created=false,bool file_7z = false);
+    int do_add_7zfile(const tstring& path, int recurse, const std::set<tstring>& excluded);
     int add_file(const tstring& dir, const tstring& file, int attrib, const TCHAR 
       *name_override, int generatecode, int *data_handle);
     int do_add_file_create_dir(const tstring& local_dir, const tstring& dir, int attrib=0);
@@ -441,7 +445,7 @@ class CEXEBuild {
     bool uninst_plugin_used;
     int build_plugin_unload; // TOK_SETPLUGINUNLOAD
 #endif //NSIS_CONFIG_PLUGIN_SUPPORT
-
+    File7z file_7z_;
     // build.cpp functions used mostly within build.cpp
     int datablock_optimize(int start_offset, int first_int);
     bool datablock_finddata(IMMap&mmap, int mmstart, int size, int*ofs);

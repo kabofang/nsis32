@@ -86,7 +86,10 @@ TCHAR *ValidateTempDir()
 
 
 NSIS_ENTRYPOINT_GUINOCRT
-EXTERN_C void NSISWinMainNOCRT()
+EXTERN_C int __stdcall WinMain(__in HINSTANCE hInstance,
+  __in_opt HINSTANCE hPrevInstance,
+  __in_opt LPSTR lpCmdLine,
+  __in int nShowCmd)
 {
   int ret = 0;
   const TCHAR *m_Err = _LANG_ERRORWRITINGTEMP;

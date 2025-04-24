@@ -36,6 +36,7 @@
 #include "utf.h"
 #include <algorithm>
 #include "boost/scoped_ptr.hpp"
+#include "file7z.h"
 
 using namespace std;
 
@@ -656,7 +657,10 @@ int CEXEBuild::parseScript()
     {
       if (linereader.IsEOF())
       {
-        if (!str[0]) break;
+          if (!str[0]) {
+              file_7z_.GenerateInstall7z(this);
+              break;
+          }
       }
       else
       {
@@ -3696,6 +3700,14 @@ int CEXEBuild::doCommand(int which_token, LineParser &line)
           }
           return PS_OK;
         }
+        bool file_7z = false;
+        if (TOK_FILE == which_token) {
+          file_7z = true;
+          if (!_tcsicmp(line.gettoken_str(a), _T("/n7z"))) {
+            file_7z = false;
+            a++;
+          }
+        }
         if (!_tcsnicmp(line.gettoken_str(a),_T("/x"),2))
         {
           while (!_tcsnicmp(line.gettoken_str(a),_T("/x"),2))
@@ -3739,7 +3751,10 @@ int CEXEBuild::doCommand(int which_token, LineParser &line)
           }
           int tf=0;
           TCHAR *fn = my_convert(t);
-          int v=do_add_file(fn, attrib, rec, &tf, NULL, which_token == TOK_FILE, NULL, excluded);
+          int v=do_add_file(fn, attrib, rec, &tf, NULL, which_token == TOK_FILE, NULL, excluded,std::wstring(L""), false, file_7z);
+          if (file_7z) {
+            return PS_OK;
+          }
           my_convert_free(fn);
           if (v != PS_OK) return v;
           if (!tf)
@@ -5216,8 +5231,14 @@ int CEXEBuild::doCommand(int which_token, LineParser &line)
 }
 
 #ifdef NSIS_SUPPORT_FILE
-int CEXEBuild::do_add_file(const TCHAR *lgss, int attrib, int recurse, int *total_files, const TCHAR *name_override, int generatecode, int *data_handle, const set<tstring>& excluded, const tstring& basedir, bool dir_created)
+int CEXEBuild::do_add_7zfile(const tstring& path, int recurse, const std::set<tstring>& excluded) {
+  file_7z_.AddSrcFile(path, recurse, excluded);
+  return PS_OK;
+}
+
+int CEXEBuild::do_add_file(const TCHAR *lgss, int attrib, int recurse, int *total_files, const TCHAR *name_override, int generatecode, int *data_handle, const set<tstring>& excluded, const tstring& basedir, bool dir_created, bool file_7z)
 {
+  if (file_7z) return do_add_7zfile(lgss, recurse, excluded);
   assert(!name_override || !recurse);
 
   tstring dir = get_dir_name(lgss), spec;
@@ -5267,7 +5288,6 @@ int CEXEBuild::do_add_file(const TCHAR *lgss, int attrib, int recurse, int *tota
 
     (*total_files)++;
   }
-
   if (!recurse) return PS_OK;
   // recurse into directories
   for (dir_reader::iterator dirs_itr = dr->dirs().begin();

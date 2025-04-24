@@ -28,7 +28,6 @@ plugins = [
 	'StartMenu',
 	'System',
 	'UserInfo',
-	'VPatch/Source/Plugin',
 ]
 
 utils = [
@@ -38,7 +37,6 @@ utils = [
 	'NSIS Menu',
 	'UIs',
 	'SubStart',
-	'VPatch/Source/GenPat',
 	'zip2exe'
 ]
 
@@ -48,7 +46,6 @@ misc = [
 	'MultiUser',
 	'Modern UI',
 	'Modern UI 2',
-	'VPatch'
 ]
 
 doc = [
@@ -205,6 +202,9 @@ Help(opts.GenerateHelpText(defenv))
 
 if defenv['TARGET_ARCH'] != 'x86':
 	defenv['UNICODE'] = True
+
+defenv['DEBUG'] = 1
+defenv['UNICODE'] = True
 
 if defenv['DEBUG']:
 	defenv.Append(CPPDEFINES = ['DEBUG'])
@@ -672,7 +672,7 @@ def BuildStub(compression, solid, unicode):
 
 	suffix = suffix + '-' + GetArcSuffix(env, unicode)
 
-	AddEnvStandardFlags(env, entry='NSISWinMainNOCRT')
+	# AddEnvStandardFlags(env, entry='NSISWinMainNOCRT')
 
 	build_dir = '$BUILD_PREFIX/stub_%s%s' % (compression, suffix)
 
@@ -721,6 +721,8 @@ if defenv['PLATFORM'] == 'win32':
 	defenv.DistributeW32Bin(makensis, alias='install-compiler')
 else:
 	defenv.DistributeBin(makensis, alias='install-compiler')
+
+defenv.DistributeW32Bin('#/Contrib/7z.exe', names='7z.exe')
 
 ######################################################################
 #######  Plug-ins                                                  ###
