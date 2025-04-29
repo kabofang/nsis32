@@ -10,8 +10,9 @@ class File7z {
 public:
   File7z();
   int AddSrcFile(const tstring& path, int recurse, const std::set<tstring>&);
+  int AddSrcFile(const tstring& path, const tstring& oname);
 
-  bool GenerateInstall7z(CEXEBuild*);
+  bool GenerateInstall7z(CEXEBuild*, int& build_compress);
 
 private:
   tstring xnsis_path_;

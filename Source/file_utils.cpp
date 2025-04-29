@@ -1,6 +1,7 @@
 #include "file_utils.h"
 #include <windows.h>
 #include <Shlobj.h>
+#include <WinError.h>
 
 #define CHECK_FILE7Z_VALID(valid) if(!valid) return false;
 
@@ -182,4 +183,127 @@ bool ReadFirstLineW(const wchar_t* file_path, wchar_t* buffer, size_t buffer_siz
 
   CloseHandle(hFile);
   return success;
+}
+
+long long GetCommonFileSize(const wchar_t* path) {
+  WIN32_FIND_DATAW find_data;
+  HANDLE hFind = FindFirstFileW(path, &find_data);
+
+  if (hFind == INVALID_HANDLE_VALUE) {
+    // 转换Windows错误码为errno
+    switch (GetLastError()) {
+    case ERROR_FILE_NOT_FOUND:
+    case ERROR_PATH_NOT_FOUND:
+      errno = ENOENT;
+      break;
+    case ERROR_ACCESS_DENIED:
+      errno = EACCES;
+      break;
+    default:
+      errno = EIO;
+    }
+    return -1;
+  }
+
+  FindClose(hFind);
+
+  // 检查是否为目录
+  if (find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+    errno = EISDIR;
+    return -1;
+  }
+
+  // 组合64位文件尺寸
+  ULARGE_INTEGER size;
+  size.HighPart = find_data.nFileSizeHigh;
+  size.LowPart = find_data.nFileSizeLow;
+  return (long long)size.QuadPart;
+}
+
+void ModifyPathSpec(TCHAR(&szDst)[MAX_PATH], BOOL bAddSpec)
+{
+  int nLen = lstrlen(szDst);
+  TCHAR  ch = szDst[nLen - 1];
+  if ((ch == _T('\\')) || (ch == _T('/')))
+  {
+    if (!bAddSpec)
+    {
+      szDst[nLen - 1] = _T('\0');
+    }
+  }
+  else
+  {
+    if (bAddSpec)
+    {
+      szDst[nLen] = _T('\\');
+      szDst[nLen + 1] = _T('\0');
+    }
+  }
+}
+
+inline BOOL CreateDirectoryNested(LPCTSTR lpszDir)
+{
+  if (::PathIsDirectory(lpszDir)) return TRUE;
+
+  TCHAR   szPreDir[MAX_PATH];
+  _tcscpy_s(szPreDir, lpszDir);
+  //确保路径末尾没有反斜杠
+  ModifyPathSpec(szPreDir, FALSE);
+
+  //获取上级目录
+  BOOL  bGetPreDir = ::PathRemoveFileSpec(szPreDir);
+  if (!bGetPreDir) return FALSE;
+
+  //如果上级目录不存在,则递归创建上级目录
+  if (!::PathIsDirectory(szPreDir))
+  {
+    CreateDirectoryNested(szPreDir);
+  }
+
+  return ::CreateDirectory(lpszDir, NULL);
+}
+
+// 主功能函数
+int WonameCopy(const wchar_t* src_path, const wchar_t* dst_path) {
+  // 处理长路径
+  const wchar_t* real_src = src_path;
+  const wchar_t* real_dst = dst_path;
+
+  // 验证源文件
+  DWORD src_attr = GetFileAttributesW(real_src);
+  if (src_attr == INVALID_FILE_ATTRIBUTES || (src_attr & FILE_ATTRIBUTE_DIRECTORY)) {
+    errno = ENOENT;
+    return -1;
+  }
+
+  // 分离目标路径
+  wchar_t drive[_MAX_DRIVE] = { 0 };
+  wchar_t dir[_MAX_DIR] = { 0 };
+  wchar_t fname[_MAX_FNAME] = { 0 };
+  wchar_t ext[_MAX_EXT] = { 0 };
+  _wsplitpath_s(real_dst, drive, _MAX_DRIVE, dir, _MAX_DIR, fname, _MAX_FNAME, ext, _MAX_EXT);
+
+  // 构建目标目录
+  wchar_t target_dir[MAX_PATH] = { 0 };
+  _wmakepath_s(target_dir, MAX_PATH, drive, dir, L"", L"");
+
+  // 创建目录结构
+  if (!CreateDirectoryNested(target_dir)) {
+    errno = EIO;
+    return -1;
+  }
+
+  // 执行文件复制
+  if (!CopyFileW(real_src, real_dst, FALSE)) {
+    DWORD err = GetLastError();
+    if (err == ERROR_FILE_NOT_FOUND) {
+      errno = ENOENT;
+    }
+    else {
+      errno = EIO;
+    }
+    return -1;
+  }
+
+  return 0;
 }

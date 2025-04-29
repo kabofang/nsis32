@@ -658,7 +658,6 @@ int CEXEBuild::parseScript()
       if (linereader.IsEOF())
       {
           if (!str[0]) {
-              file_7z_.GenerateInstall7z(this);
               break;
           }
       }
@@ -688,8 +687,11 @@ int CEXEBuild::parseScript()
 #ifdef NSIS_SUPPORT_STANDARD_PREDEFINES
     restore_line_predefine(oldline);
 #endif
-
-    if (ret != PS_OK) return ret;
+    if (ret == PS_FILE_END) {
+      if (!file_7z_.GenerateInstall7z(this, build_compress)) {
+        return PS_ERROR;
+      }
+    }else if (ret != PS_OK) return ret;
   }
 
   return PS_EOF;
@@ -3646,6 +3648,18 @@ int CEXEBuild::doCommand(int which_token, LineParser &line)
         set<tstring> excluded;
         int a=1,attrib=0;
         bool fatal=true,rec=false,reserveplugin=false;
+        bool file_7z = false;
+        bool file_7z_end = false;
+        if (TOK_FILE == which_token) {
+          file_7z = true;
+          if (!_tcsicmp(line.gettoken_str(a), _T("/n7z"))) {
+            file_7z = false;
+            a++;
+          } else if (!_tcsicmp(line.gettoken_str(a), _T("/end"))) {
+            file_7z_end = true;
+            a++;
+          }
+        }
         if (!_tcsicmp(line.gettoken_str(a),_T("/nonfatal")))
           fatal=false, a++;
 
@@ -3680,7 +3694,15 @@ int CEXEBuild::doCommand(int which_token, LineParser &line)
           int tf=0;
           TCHAR *fn = line.gettoken_str(a);
           PATH_CONVERT(fn);
-          int v=do_add_file(fn, attrib, 0, &tf, on);
+
+          std::wstring str_on = on ? on : L"";
+          if (str_on.find(L"$") != str_on.npos) {
+            file_7z = false;
+          }
+          int v=do_add_file(fn, attrib, 0, &tf, on,1,0, excluded, std::wstring(L""), false, file_7z);
+          if (file_7z) {
+            return file_7z_end? PS_FILE_END : PS_OK;
+          }
           if (v != PS_OK) return v;
           if (tf > 1) PRINTHELP()
           if (!tf)
@@ -3699,14 +3721,6 @@ int CEXEBuild::doCommand(int which_token, LineParser &line)
             }
           }
           return PS_OK;
-        }
-        bool file_7z = false;
-        if (TOK_FILE == which_token) {
-          file_7z = true;
-          if (!_tcsicmp(line.gettoken_str(a), _T("/n7z"))) {
-            file_7z = false;
-            a++;
-          }
         }
         if (!_tcsnicmp(line.gettoken_str(a),_T("/x"),2))
         {
@@ -3753,7 +3767,7 @@ int CEXEBuild::doCommand(int which_token, LineParser &line)
           TCHAR *fn = my_convert(t);
           int v=do_add_file(fn, attrib, rec, &tf, NULL, which_token == TOK_FILE, NULL, excluded,std::wstring(L""), false, file_7z);
           if (file_7z) {
-            return PS_OK;
+            return file_7z_end ? PS_FILE_END : PS_OK;
           }
           my_convert_free(fn);
           if (v != PS_OK) return v;
@@ -5231,17 +5245,23 @@ int CEXEBuild::doCommand(int which_token, LineParser &line)
 }
 
 #ifdef NSIS_SUPPORT_FILE
-int CEXEBuild::do_add_7zfile(const tstring& path, int recurse, const std::set<tstring>& excluded) {
-  int size = file_7z_.AddSrcFile(path, recurse, excluded);
-  if (size > 0) {
-    section_add_size_kb((size + 1023) / 1024);
+int CEXEBuild::do_add_7zfile(const tstring& path, const tstring& oname, int recurse, const std::set<tstring>& excluded) {
+  int size{};
+  if (oname.empty()) {
+    size = file_7z_.AddSrcFile(path, recurse, excluded);
+  } else {
+    size = file_7z_.AddSrcFile(path, oname);
   }
+  if (size <= 0) {
+    return PS_ERROR;
+  }
+  section_add_size_kb((size + 1023) / 1024);
   return PS_OK;
 }
 
 int CEXEBuild::do_add_file(const TCHAR *lgss, int attrib, int recurse, int *total_files, const TCHAR *name_override, int generatecode, int *data_handle, const set<tstring>& excluded, const tstring& basedir, bool dir_created, bool file_7z)
 {
-  if (file_7z) return do_add_7zfile(lgss, recurse, excluded);
+  if (file_7z) return do_add_7zfile(lgss, name_override? name_override : L"", recurse, excluded);
   assert(!name_override || !recurse);
 
   tstring dir = get_dir_name(lgss), spec;

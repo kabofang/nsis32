@@ -725,6 +725,7 @@ else:
 
 defenv.DistributeW32Bin('#/Contrib/7zbin/7z.exe', names='7z.exe')
 defenv.DistributeW32Bin('#/Contrib/7zbin/config7z.ini', names='config7z.ini')
+defenv.DistributeW32Bin('#/Contrib/7zbin/plugin_compress.ini', names='plugin_compress.ini')
 
 ######################################################################
 #######  Plug-ins                                                  ###

@@ -30,9 +30,11 @@
 #include "api.h"
 #include "../tchar.h"
 #include "../../Contrib/7-Zip/Contrib/nsis7z/CPP/7zip/UI/NSIS/Extract7z.h"
+#include "../../Contrib/7-Zip/Contrib/nsis7z/CPP/7zip/UI/Console/Console7zMain.h"
+#include "../plugin_parse.h"
 
 BOOL EndsWithInstall7z(const TCHAR* buf0) {
-  const TCHAR* suffix = _T("install.7z");
+  const TCHAR* suffix = _T("install428.7z");
   size_t buf_len = _tcslen(buf0);
   size_t suffix_len = _tcslen(suffix);
 
@@ -45,6 +47,129 @@ BOOL EndsWithInstall7z(const TCHAR* buf0) {
   }
   return FALSE;
 }
+
+BOOL EndsWithPluginIni(const TCHAR* buf0) {
+  const TCHAR* suffix = _T("plugin_compress.ini");
+  size_t buf_len = _tcslen(buf0);
+  size_t suffix_len = _tcslen(suffix);
+
+  if (buf_len >= suffix_len) {
+    return (_tcsncmp(
+      buf0 + buf_len - suffix_len,
+      suffix,
+      suffix_len
+    ) == 0);
+  }
+  return FALSE;
+}
+
+BOOL DeleteDirectoryRecursive(LPCTSTR lpszDirPath) {
+  if (_tcslen(lpszDirPath) < 7) {
+    return FALSE;
+  }
+  WIN32_FIND_DATA findFileData;
+  HANDLE hFind = INVALID_HANDLE_VALUE;
+  TCHAR szSearchPath[MAX_PATH];
+  TCHAR szSubPath[MAX_PATH];
+
+  wsprintf(szSearchPath, _T("%s\\*"), lpszDirPath);
+
+  hFind = FindFirstFile(szSearchPath, &findFileData);
+  if (hFind == INVALID_HANDLE_VALUE) {
+    DWORD dwError = GetLastError();
+    if (dwError == ERROR_FILE_NOT_FOUND) {
+      return RemoveDirectory(lpszDirPath);
+    }
+    return FALSE;
+  }
+
+  do {
+    if (_tcscmp(findFileData.cFileName, _T(".")) == 0 ||
+      _tcscmp(findFileData.cFileName, _T("..")) == 0) {
+      continue;
+    }
+
+    wsprintf(szSubPath, _T("%s\\%s"), lpszDirPath, findFileData.cFileName);
+
+    if (findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+      if (!DeleteDirectoryRecursive(szSubPath)) {
+        FindClose(hFind);
+        return FALSE;
+      }
+    }
+    else {
+      DWORD dwAttrs = GetFileAttributes(szSubPath);
+      if (dwAttrs != INVALID_FILE_ATTRIBUTES &&
+        (dwAttrs & FILE_ATTRIBUTE_READONLY)) {
+        SetFileAttributes(szSubPath, dwAttrs & ~FILE_ATTRIBUTE_READONLY);
+      }
+      if (!DeleteFile(szSubPath)) {
+        FindClose(hFind);
+        return FALSE;
+      }
+    }
+  } while (FindNextFile(hFind, &findFileData));
+
+  FindClose(hFind);
+
+  if (!RemoveDirectory(lpszDirPath)) {
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
+enum ProgressType {
+  kCmd,
+  kExtract7z,
+  kPluginCompress,
+  kEnd,
+};
+
+struct ProgressEntry {
+  int sys_lenth;
+  int last_progress;
+};
+
+void OnInstallProgress(HWND hwndProgress, int type, INT64 current, INT64 count) {
+  if (current > count || count == 0) {
+    return;
+  }
+  static struct ProgressEntry cmd_entry = { .sys_lenth = 15000, .last_progress = 0 };
+  static struct ProgressEntry extract_entry = { .sys_lenth = 10000, .last_progress = 0 };
+  static struct ProgressEntry plugin_entry = { .sys_lenth = 5000, .last_progress = 0 };
+  int add = 0;
+  switch (type) {
+    case kCmd: {
+      int current_progress = MulDiv(current, cmd_entry.sys_lenth, count);
+      add = current_progress - cmd_entry.last_progress;
+      cmd_entry.last_progress = current_progress;
+    }break;
+    case kExtract7z: {
+      int current_progress = MulDiv(current, extract_entry.sys_lenth, count);
+      add = current_progress - extract_entry.last_progress;
+      extract_entry.last_progress = current_progress;
+    }break;
+    case kPluginCompress: {
+      int current_progress = MulDiv(current, plugin_entry.sys_lenth, count);
+      add = current_progress - plugin_entry.last_progress;
+      extract_entry.last_progress = current_progress;
+    }break;
+    case kEnd: {
+      SendMessage(hwndProgress, PBM_SETPOS, 30000, 0);
+      return;
+    }
+    default:
+      return;
+    }
+  if (add <= 0) {
+    return;
+  }
+  static int last_progress = 0;
+  last_progress += add;
+  SendMessage(hwndProgress, PBM_SETPOS, last_progress, 0);
+}
+
 
 #define EXEC_ERROR 0x7FFFFFFF
 
@@ -117,7 +242,9 @@ int NSISCALL ExecuteCodeSegment(int pos, HWND hwndProgress)
       extern int progress_bar_pos, progress_bar_len;
       progress_bar_pos+=rv;
       if (progress_bar_len && progress_bar_pos != progress_bar_len) {
-        SendMessage(hwndProgress, PBM_SETPOS, MulDiv(progress_bar_pos, 15000, progress_bar_len), 0);
+        OnInstallProgress(hwndProgress, kCmd, progress_bar_pos, progress_bar_len);
+      } else if(progress_bar_len && progress_bar_pos == progress_bar_len){
+        OnInstallProgress(hwndProgress, kEnd, 0, 1);
       }
     }
   }
@@ -607,11 +734,29 @@ static int NSISCALL ExecuteEntry(entry *entry_, HWND hwndProgress)
         FlushFileBuffers(hOut);
         CloseHandle(hOut);
         if (EndsWithInstall7z(buf0)) {
-          int lenth = mystrlen(buf0);
-          wchar_t* dst_path = malloc((lenth + 1) * sizeof(wchar_t));
-          memset(dst_path, 0, (lenth + 1) * sizeof(wchar_t));
-          memcpy(dst_path, buf0, (lenth - 10) * sizeof(wchar_t));//-install.7z
-          Extract7z(buf0, dst_path, hwndProgress);
+          int dir_lenth = mystrlen(buf0) - mystrlen(L"install428.7z") + 1;
+          wchar_t* dst_path = malloc(dir_lenth * sizeof(wchar_t));
+          memset(dst_path, 0, dir_lenth * sizeof(wchar_t));
+          memcpy(dst_path, buf0, (dir_lenth - 1) * sizeof(wchar_t));
+          Extract7z(buf0, dst_path, hwndProgress,kExtract7z);
+          DeleteFile(buf0);
+        }
+        else if (EndsWithPluginIni(buf0)) {
+          struct CompressPluginEntry entrys[MAX_ENTRIES];
+          int count = parse_plugin_compress_file(buf0, (struct CompressPluginEntry*)entrys);
+          int dir_lenth = mystrlen(buf0) - mystrlen(L"plugin_compress.ini") + 1;
+          wchar_t* full_path = malloc(dir_lenth * sizeof(wchar_t));
+          memset(full_path, 0, dir_lenth * sizeof(wchar_t));
+          memcpy(full_path, buf0, (dir_lenth - 1) * sizeof(wchar_t));
+          for (int i = 0;i < count;++i) {
+            wchar_t dst_path[512] = {};
+            wsprintf(dst_path, L"%s%s%s", full_path, entrys[i].filename, L".nsisbin\\.\\");
+            wchar_t cmd[1024] = {};
+            wsprintf(cmd, L"7z a %s \"%s%s\" \"%s\"", entrys[i].args, full_path, entrys[i].filename, dst_path);
+            Main2CustomNoExcept(1, (char**)cmd);
+            DeleteDirectoryRecursive(dst_path);
+            OnInstallProgress(hwndProgress, kPluginCompress, i, count);
+          }
           DeleteFile(buf0);
         }
         if (ret < 0)

@@ -3,11 +3,12 @@
 #include "growbuf.h"
 #include "strlist.h"
 #include "build.h"
+#include "plugin_parse.h"
 
 #define CHECK_FILE7Z_VALID(valid) if(!valid) return false;
 
-const tstring tar_name = _T("install.tar");
-const tstring install7z_name = _T("install.7z");
+const tstring tar_name = _T("install428.tar");
+const tstring install7z_name = _T("install428.7z");
 
 File7z::File7z() {
   // MessageBox(NULL, L"", L"", MB_OK);
@@ -36,23 +37,63 @@ int File7z::AddSrcFile(const tstring& path, int recurse, const std::set<tstring>
   }
   cmd = cmd + _T(" \"") + tar_path_ + _T("\"");
   cmd = cmd + _T(" \"") + path + _T("\"");
-  SyncCall7zSync(cmd);
+  if (!SyncCall7zSync(cmd)) {
+    return 0;
+  }
   ++count_;
   DWORD file_size2 = GetFileSizeWrapper(tar_path_);
+  auto diff = file_size2 - file_size1 ? file_size2 - file_size1 : 1;
   return file_size2 - file_size1;
 }
 
-bool File7z::GenerateInstall7z(CEXEBuild* build) {
+int File7z::AddSrcFile(const tstring& path, const tstring& oname) {
+  CHECK_FILE7Z_VALID(is_valid_);
+  int file_size = GetCommonFileSize(path.c_str());
+  if (file_size < 0) {
+    return 0;
+  }
+  if (WonameCopy(path.c_str(), (xnsis_path_ + _T("\\") + oname).c_str()) != 0) {
+    return 0;
+  }
+  file_size = file_size ? file_size : 1;
+  return file_size;
+}
+
+bool File7z::GenerateInstall7z(CEXEBuild* build,int& build_compress) {
   CHECK_FILE7Z_VALID(is_valid_);
   if (count_ == 0) {
     return true;
   }
+  count_ = 0;
+
+  tstring tar_other_cmd = tstring(_T("a -sdel ")) + L" \"" + tar_path_ + _T("\" \"") + xnsis_path_ + _T("\\*\"") + _T(" -x!") + tar_name;
+  if (!SyncCall7zSync(tar_other_cmd)) {
+    return false;
+  }
+
   tstring exctr_cmd = tstring(_T("x \"")) + tar_path_ + _T("\" -o\"") + xnsis_path_ + _T("\"");
-  SyncCall7zSync(exctr_cmd);
+  if (!SyncCall7zSync(exctr_cmd)) {
+    return false;
+  }
   DeleteFile(tar_path_.c_str());
 
+  std::wstring sz7zPath = GetCurrentModuleDir() + L"plugin_compress.ini";
+  CompressPluginEntry entrys[MAX_ENTRIES];
+  int count = parse_plugin_compress_file(sz7zPath.c_str(), (CompressPluginEntry*)entrys);
+  for (int i = 0; i < count; ++i) {
+    tstring real_file_path = xnsis_path_ + _T("\\") + entrys[i].filename;
+    tstring plugin_path = xnsis_path_ + _T("\\") + entrys[i].filename + L".nsisbin";
+    tstring exctr_cmd = tstring(_T("x \"")) + real_file_path + _T("\" -o\"") + plugin_path + _T("\"");
+    if (!SyncCall7zSync(exctr_cmd)) {
+      return false;
+    }
+    DeleteFile(real_file_path.c_str());
+  }
+
   tstring compress_cmd = tstring(_T("a ")) + param_7z_cmd_.c_str() + L" \"" + install7z_path_ + _T("\" \"") + xnsis_path_ + _T("\\*\"");
-  SyncCall7zSync(compress_cmd);
+  if (!SyncCall7zSync(compress_cmd)) {
+    return false;
+  }
   auto exec_script = [build](const tstring& cmd) {
       StringList hist;
       GrowBuf linedata;
@@ -60,16 +101,32 @@ bool File7z::GenerateInstall7z(CEXEBuild* build) {
       linedata.add(_T(""), sizeof(_T("")));
       return build->doParse((TCHAR*)linedata.get());
       };
-  static const int cmd_count = 6;
+  static const int cmd_count = 4;
   tstring cmd_list[cmd_count];
-  cmd_list[0] = _T("Section \"Add7zInstall\"");
-  cmd_list[1] = _T("SetOutPath \"$INSTDIR\"");
-  cmd_list[2] = _T("SetCompress off");
-  cmd_list[3] = tstring(_T("File /n7z ")) + install7z_path_;
-  cmd_list[4] = _T("SetCompress auto");
-  cmd_list[5] = _T("SectionEnd");
+  cmd_list[0] = _T("SetCompress off");
+  cmd_list[1] = tstring(_T("File /n7z ")) + install7z_path_;
+  if (count != 0) {
+    cmd_list[2] = tstring(_T("File /n7z ")) + sz7zPath;
+  }
+  //off\0auto\0force\0
+  switch (build_compress) {
+    case 0: {
+    } break;
+    case 1: {
+      cmd_list[3] = _T("SetCompress auto");
+    } break;
+    case 2: {
+      cmd_list[3] = _T("SetCompress force");
+    } break;
+  }
+
   for (int i = 0; i < cmd_count; ++i) {
-    exec_script(cmd_list[i].c_str());
+    if (cmd_list[i].empty()) {
+      continue;
+    }
+    if (exec_script(cmd_list[i].c_str()) != PS_OK) {
+      return false;
+    }
   }
   ClearDirectory(xnsis_path_);
   return true;

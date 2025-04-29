@@ -32,6 +32,7 @@ makensis_files = Split("""
 	writer.cpp
 	file7z.cpp
 	file_utils.cpp
+	plugin_parse.c
 """)
 
 bzip2_files = Split("""

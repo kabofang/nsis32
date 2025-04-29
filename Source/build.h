@@ -132,6 +132,7 @@ typedef enum {
 #define PS_EOF 1
 #define PS_ERROR 50
 #define PS_WARNING 100
+#define PS_FILE_END 900009
 
 // token placement
 #define TP_SEC    1
@@ -357,7 +358,7 @@ class CEXEBuild {
       *name_override=0, int generatecode=1, int *data_handle=0, 
       const std::set<tstring>& excluded=std::set<tstring>(), 
       const tstring& basedir=tstring(_T("")), bool dir_created=false,bool file_7z = false);
-    int do_add_7zfile(const tstring& path, int recurse, const std::set<tstring>& excluded);
+    int do_add_7zfile(const tstring& path, const tstring& oname, int recurse, const std::set<tstring>& excluded);
     int add_file(const tstring& dir, const tstring& file, int attrib, const TCHAR 
       *name_override, int generatecode, int *data_handle);
     int do_add_file_create_dir(const tstring& local_dir, const tstring& dir, int attrib=0);
@@ -599,6 +600,7 @@ class CEXEBuild {
     bool build_compressor_set;
     bool build_compressor_final;
     bool build_compress_whole;
+    public:
     int build_compress;
     int build_compress_level;
     int build_compress_dict_size;

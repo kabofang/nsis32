@@ -13,3 +13,5 @@ tstring GetCurrentModuleDir();
 bool SyncCall7zSync(const tstring& szCommand);
 DWORD GetFileSizeWrapper(const std::wstring& filePath);
 bool ReadFirstLineW(const wchar_t* file_path, wchar_t* buffer, size_t buffer_size);
+long long GetCommonFileSize(const wchar_t* path);
+int WonameCopy(const wchar_t* src_path, const wchar_t* dst_path);
