@@ -71,7 +71,7 @@ bool File7z::GenerateInstall7z(CEXEBuild* build,int& build_compress) {
     return false;
   }
 
-  tstring exctr_cmd = tstring(_T("x \"")) + tar_path_ + _T("\" -o\"") + xnsis_path_ + _T("\"");
+  tstring exctr_cmd = tstring(_T("x \"")) + tar_path_ + _T("\" -o\"") + xnsis_path_ + _T("\" -aoa");
   if (!SyncCall7zSync(exctr_cmd)) {
     return false;
   }
