@@ -13,7 +13,9 @@ public:
   int AddSrcFile(const tstring& path, const tstring& oname);
 
   bool GenerateInstall7z(CEXEBuild*, int& build_compress);
-
+  wchar_t* GetInstall7zName();
+ 
+  bool install_name_seted_ = false;
 private:
   tstring xnsis_path_;
   tstring tar_path_;

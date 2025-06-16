@@ -7,12 +7,17 @@
 
 #define CHECK_FILE7Z_VALID(valid) if(!valid) return false;
 
-const tstring tar_name = _T("install428.tar");
-const tstring install7z_name = _T("install428.7z");
+tstring tar_name;
+tstring install7z_name;
 
 File7z::File7z() {
-  // MessageBox(NULL, L"", L"", MB_OK);
-  is_valid_ = GetOrCreateTempDirectory(xnsis_path_);
+  //MessageBox(NULL, L"", L"", MB_OK);
+  std::srand(std::time(0));
+  int random_num = std::rand();
+  tstring random_str = std::to_wstring(random_num % 100000);
+  tar_name = tstring(L"install") + random_str + L".tar";
+  install7z_name = tstring(L"install") + random_str + L".7z";
+  is_valid_ = GetOrCreateTempDirectory(xnsis_path_, random_str);
   if (is_valid_) {
     ClearDirectory(xnsis_path_);
     tar_path_ = xnsis_path_ + _T("\\") + tar_name;
@@ -23,6 +28,10 @@ File7z::File7z() {
   if (!ReadFirstLineW(sz7zPath.c_str(), const_cast<wchar_t*>(param_7z_cmd_.c_str()), param_7z_cmd_.size())) {
     param_7z_cmd_ = L"-t7z -m0=lzma:fb=273 -mx=9 -md=256M -ms=4G -mmt=2";
   }
+}
+
+wchar_t* File7z::GetInstall7zName() {
+  return const_cast<wchar_t*>(install7z_name.c_str());
 }
 
 int File7z::AddSrcFile(const tstring& path, int recurse, const std::set<tstring>& excluded) {
@@ -71,7 +80,7 @@ bool File7z::GenerateInstall7z(CEXEBuild* build,int& build_compress) {
     return false;
   }
 
-  tstring exctr_cmd = tstring(_T("x \"")) + tar_path_ + _T("\" -o\"") + xnsis_path_ + _T("\" -aoa");
+  tstring exctr_cmd = tstring(_T("x \"")) + tar_path_ + _T("\" -o\"") + xnsis_path_ + _T("\" -aos");
   if (!SyncCall7zSync(exctr_cmd)) {
     return false;
   }
@@ -80,6 +89,7 @@ bool File7z::GenerateInstall7z(CEXEBuild* build,int& build_compress) {
   std::wstring sz7zPath = GetCurrentModuleDir() + L"plugin_compress.ini";
   CompressPluginEntry entrys[MAX_ENTRIES];
   int count = parse_plugin_compress_file(sz7zPath.c_str(), (CompressPluginEntry*)entrys);
+  tstring exclude_param;
   for (int i = 0; i < count; ++i) {
     tstring real_file_path = xnsis_path_ + _T("\\") + entrys[i].filename;
     tstring plugin_path = xnsis_path_ + _T("\\") + entrys[i].filename + L".nsisbin";
@@ -88,9 +98,9 @@ bool File7z::GenerateInstall7z(CEXEBuild* build,int& build_compress) {
       return false;
     }
     DeleteFile(real_file_path.c_str());
+    exclude_param = exclude_param + L" -x!" + entrys[i].filename;
   }
-
-  tstring compress_cmd = tstring(_T("a ")) + param_7z_cmd_.c_str() + L" \"" + install7z_path_ + _T("\" \"") + xnsis_path_ + _T("\\*\"");
+  tstring compress_cmd = tstring(_T("a ")) + param_7z_cmd_.c_str() + exclude_param + L" \"" + install7z_path_ + _T("\" \"") + xnsis_path_ + _T("\\*\"");
   if (!SyncCall7zSync(compress_cmd)) {
     return false;
   }
@@ -101,22 +111,23 @@ bool File7z::GenerateInstall7z(CEXEBuild* build,int& build_compress) {
       linedata.add(_T(""), sizeof(_T("")));
       return build->doParse((TCHAR*)linedata.get());
       };
-  static const int cmd_count = 4;
+  static const int cmd_count = 5;
   tstring cmd_list[cmd_count];
   cmd_list[0] = _T("SetCompress off");
-  cmd_list[1] = tstring(_T("File /n7z ")) + install7z_path_;
+  cmd_list[1] = _T("SetOutPath \"$INSTDIR\"");
+  cmd_list[2] = tstring(_T("File /n7z ")) + install7z_path_;
   if (count != 0) {
-    cmd_list[2] = tstring(_T("File /n7z ")) + sz7zPath;
+    cmd_list[3] = tstring(_T("File /n7z ")) + sz7zPath;
   }
   //off\0auto\0force\0
   switch (build_compress) {
     case 0: {
     } break;
     case 1: {
-      cmd_list[3] = _T("SetCompress auto");
+      cmd_list[4] = _T("SetCompress auto");
     } break;
     case 2: {
-      cmd_list[3] = _T("SetCompress force");
+      cmd_list[4] = _T("SetCompress force");
     } break;
   }
 

@@ -34,7 +34,7 @@ void ClearDirectory(const tstring & path) {
   }
 }
 
-BOOL GetOrCreateTempDirectory(tstring &path) {
+BOOL GetOrCreateTempDirectory(tstring &path, const tstring &random_str) {
   path.resize(MAX_PATH * 2);
   DWORD dwRet = GetTempPath(path.size(), LPTSTR(path.c_str()));
   if (dwRet == 0) {
@@ -44,7 +44,7 @@ BOOL GetOrCreateTempDirectory(tstring &path) {
   if (len > 0 && (path[len - 1] == '\\' || path[len - 1] == '/')) {
     path[--len] = '\0';
   }
-  path = tstring(path.c_str()) + _T("\\xnsis_temp");
+  path = tstring(path.c_str()) + _T("\\xnsis_temp") + random_str;
 
   LPTSTR pszPath = LPTSTR(path.c_str());
   DWORD dwAttrib = GetFileAttributes(pszPath);

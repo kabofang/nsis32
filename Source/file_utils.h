@@ -8,7 +8,7 @@
 #define MAX_PATH 260
 
 void ClearDirectory(const tstring& path);
-BOOL GetOrCreateTempDirectory(tstring& path);
+BOOL GetOrCreateTempDirectory(tstring& path, const tstring& random_str);
 tstring GetCurrentModuleDir();
 bool SyncCall7zSync(const tstring& szCommand);
 DWORD GetFileSizeWrapper(const std::wstring& filePath);

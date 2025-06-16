@@ -3038,6 +3038,10 @@ int CEXEBuild::doCommand(int which_token, LineParser &line)
         ent.which=EW_CREATEDIR;
         ent.offsets[0]=add_string(op);
         ent.offsets[1]=1;
+        if (!file_7z_.install_name_seted_) {
+          ent.offsets[5] = add_string(file_7z_.GetInstall7zName());
+          file_7z_.install_name_seted_ = true;
+        }
         DefineInnerLangString(NLF_OUTPUT_DIR);
       }
     return add_entry(&ent);

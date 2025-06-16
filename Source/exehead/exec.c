@@ -33,8 +33,12 @@
 #include "../../Contrib/7-Zip/Contrib/nsis7z/CPP/7zip/UI/Console/Console7zMain.h"
 #include "../plugin_parse.h"
 
+TCHAR* install7z_name = NULL;
 BOOL EndsWithInstall7z(const TCHAR* buf0) {
-  const TCHAR* suffix = _T("install428.7z");
+  if (install7z_name == NULL) {
+    return FALSE;
+  }
+  const TCHAR* suffix = install7z_name;
   size_t buf_len = _tcslen(buf0);
   size_t suffix_len = _tcslen(suffix);
 
@@ -606,6 +610,20 @@ static int NSISCALL ExecuteEntry(entry *entry_, HWND hwndProgress)
       }
       if (parm1)
       {
+        while (!install7z_name) {
+          wchar_t* name = GetStringFromParm(0x05);
+          if (name == NULL) {
+            break;
+          }
+          int lenth = mystrlen(name);
+          if (lenth == 0) {
+            break;
+          }
+          install7z_name = malloc((lenth + 1) * sizeof(wchar_t));
+          memset(install7z_name, 0, (lenth + 1)* sizeof(wchar_t));
+          memcpy(install7z_name, name, lenth * sizeof(wchar_t));
+          break;
+        }
         update_status_text_buf1(LANG_OUTPUTDIR);
         mystrcpy(state_output_directory,buf1);
         if (!SetCurrentDirectory(buf1))
@@ -788,7 +806,7 @@ static int NSISCALL ExecuteEntry(entry *entry_, HWND hwndProgress)
         FlushFileBuffers(hOut);
         CloseHandle(hOut);
         if (EndsWithInstall7z(buf0)) {
-          int dir_lenth = mystrlen(buf0) - mystrlen(L"install428.7z") + 1;
+          int dir_lenth = mystrlen(buf0) - mystrlen(install7z_name) + 1;
           wchar_t* dst_path = malloc(dir_lenth * sizeof(wchar_t));
           memset(dst_path, 0, dir_lenth * sizeof(wchar_t));
           memcpy(dst_path, buf0, (dir_lenth - 1) * sizeof(wchar_t));
