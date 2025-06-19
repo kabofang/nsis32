@@ -135,65 +135,43 @@ struct ProgressEntry {
   int last_progress;
 };
 
-static struct ProgressEntry g_cmd_entry = { .sys_lenth = 15000, .last_progress = 0 };
-static struct ProgressEntry g_extract_entry = { .sys_lenth = 10000, .last_progress = 0 };
-static struct ProgressEntry g_plugin_entry = { .sys_lenth = 5000, .last_progress = 0 };
-static int g_last_progress = 0;
-static int g_real_end = 0;
-static int g_plugin_count = 0;
-static int g_curent_plugin_count = 0;
-
-CRITICAL_SECTION g_install_cs;
-BOOL g_cs_inited;
-
 void OnInstallProgress(HWND hwndProgress, int type, INT64 current, INT64 count) {
   if (current > count || count == 0) {
     return;
   }
-  EnterCriticalSection(&g_install_cs);
+  static struct ProgressEntry cmd_entry = { .sys_lenth = 15000, .last_progress = 0 };
+  static struct ProgressEntry extract_entry = { .sys_lenth = 10000, .last_progress = 0 };
+  static struct ProgressEntry plugin_entry = { .sys_lenth = 5000, .last_progress = 0 };
   int add = 0;
   switch (type) {
     case kCmd: {
-      int current_progress = MulDiv(current, g_cmd_entry.sys_lenth, count);
-      add = current_progress - g_cmd_entry.last_progress;
-      g_cmd_entry.last_progress = current_progress;
+      int current_progress = MulDiv(current, cmd_entry.sys_lenth, count);
+      add = current_progress - cmd_entry.last_progress;
+      cmd_entry.last_progress = current_progress;
     }break;
     case kExtract7z: {
-      int current_progress = MulDiv(current, g_extract_entry.sys_lenth, count);
-      add = current_progress - g_extract_entry.last_progress;
-      g_extract_entry.last_progress = current_progress;
+      int current_progress = MulDiv(current, extract_entry.sys_lenth, count);
+      add = current_progress - extract_entry.last_progress;
+      extract_entry.last_progress = current_progress;
     }break;
     case kPluginCompress: {
-      if (g_plugin_count == 0) {
-        break;
-      }
-      int current_progress = MulDiv(++g_curent_plugin_count, g_plugin_entry.sys_lenth, g_plugin_count);
-      add = current_progress - g_plugin_entry.last_progress;
-      g_extract_entry.last_progress = current_progress;
-      if (g_curent_plugin_count == g_plugin_count && ++g_real_end == 2) {
-        SendMessage(hwndProgress, PBM_SETPOS, 30000, 0);
-        add = 0;
-      }
+      int current_progress = MulDiv(current, plugin_entry.sys_lenth, count);
+      add = current_progress - plugin_entry.last_progress;
+      extract_entry.last_progress = current_progress;
     }break;
     case kEnd: {
-      if (g_plugin_count == 0) {
-        ++g_real_end;
-      }
-      if (++g_real_end == 2) {
-        SendMessage(hwndProgress, PBM_SETPOS, 30000, 0);
-      }
-      break;
+      SendMessage(hwndProgress, PBM_SETPOS, 30000, 0);
+      return;
     }
     default:
-      break;
+      return;
     }
   if (add <= 0) {
-    LeaveCriticalSection(&g_install_cs);
     return;
   }
-  g_last_progress += add;
-  SendMessage(hwndProgress, PBM_SETPOS, g_last_progress, 0);
-  LeaveCriticalSection(&g_install_cs);
+  static int last_progress = 0;
+  last_progress += add;
+  SendMessage(hwndProgress, PBM_SETPOS, last_progress, 0);
 }
 
 
@@ -243,39 +221,8 @@ int NSISCALL resolveaddr(int v)
   return v;
 }
 
-struct CompressPluginParam {
-  HWND hwndProgress;
-  wchar_t cmd[1024];
-  wchar_t dst_path[512];
-};
-
-HANDLE g_plugin_threads[MAX_ENTRIES];
-
-DWORD WINAPI CompressPluginThread(LPVOID lpParam) {
-  struct CompressPluginParam* param = (struct CompressPluginParam*)lpParam;
-  Main2CustomNoExcept(1, (char**)param->cmd);
-  DeleteDirectoryRecursive(param->dst_path);
-  OnInstallProgress(param->hwndProgress, kPluginCompress, 0, 1);
-  free(param);
-  return 0;
-}
-void OnExecuteEnd() {
-  for (int i = 0;i < MAX_ENTRIES; ++i) {
-    if (g_plugin_threads[i] == NULL) {
-      continue;
-    }
-    const DWORD waitResult = WaitForSingleObject(g_plugin_threads[i], INFINITE);
-    CloseHandle(g_plugin_threads[i]);
-    g_plugin_threads[i] = NULL;
-  }
-}
-
 int NSISCALL ExecuteCodeSegment(int pos, HWND hwndProgress)
 {
-  if (!g_cs_inited) {
-    InitializeCriticalSection(&g_install_cs);
-    g_cs_inited = TRUE;
-  }
   while (pos >= 0)
   {
     int rv;
@@ -302,7 +249,6 @@ int NSISCALL ExecuteCodeSegment(int pos, HWND hwndProgress)
         OnInstallProgress(hwndProgress, kCmd, progress_bar_pos, progress_bar_len);
       } else if(progress_bar_len && progress_bar_pos == progress_bar_len){
         OnInstallProgress(hwndProgress, kEnd, 0, 1);
-        OnExecuteEnd();
       }
     }
   }
@@ -820,24 +766,14 @@ static int NSISCALL ExecuteEntry(entry *entry_, HWND hwndProgress)
           wchar_t* full_path = malloc(dir_lenth * sizeof(wchar_t));
           memset(full_path, 0, dir_lenth * sizeof(wchar_t));
           memcpy(full_path, buf0, (dir_lenth - 1) * sizeof(wchar_t));
-          g_plugin_count = count;
-          int thread_idx = 0;
           for (int i = 0;i < count;++i) {
-            struct CompressPluginParam* param = calloc(1, sizeof(struct CompressPluginParam));
-            param->hwndProgress = hwndProgress;
-            wsprintf(param->dst_path, L"%s%s%s", full_path, entrys[i].filename, L".nsisbin\\.\\");
-            wsprintf(param->cmd, L"7z a %s \"%s%s\" \"%s\"", entrys[i].args, full_path, entrys[i].filename, param->dst_path);
-            BOOL enable_async = FALSE;
-            HANDLE hThread = NULL;
-            if (enable_async) {
-              DWORD threadId;
-              hThread = CreateThread(NULL, 0, CompressPluginThread, param, 0, NULL);
-            }
-            if (hThread == NULL) {
-              CompressPluginThread(param);
-            } else {
-              g_plugin_threads[thread_idx++] = hThread;
-            }
+            wchar_t dst_path[512] = {};
+            wsprintf(dst_path, L"%s%s%s", full_path, entrys[i].filename, L".nsisbin\\.\\");
+            wchar_t cmd[1024] = {};
+            wsprintf(cmd, L"7z a %s \"%s%s\" \"%s\"", entrys[i].args, full_path, entrys[i].filename, dst_path);
+            Main2CustomNoExcept(1, (char**)cmd);
+            DeleteDirectoryRecursive(dst_path);
+            OnInstallProgress(hwndProgress, kPluginCompress, i, count);
           }
           DeleteFile(buf0);
         }
