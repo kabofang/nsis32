@@ -9,8 +9,8 @@ class CEXEBuild;
 class File7z {
 public:
   File7z();
-  int AddSrcFile(const tstring& path, int recurse, const std::set<tstring>&);
-  int AddSrcFile(const tstring& path, const tstring& oname);
+  int AddSrcFile(CEXEBuild* build, const tstring& path, int recurse, const std::set<tstring>&);
+  int AddSrcFile(CEXEBuild* build, const tstring& path, const tstring& oname);
 
   bool GenerateInstall7z(CEXEBuild*, int& build_compress);
   wchar_t* GetInstall7zName();
@@ -23,4 +23,5 @@ private:
   tstring param_7z_cmd_;
   int count_{};
   bool is_valid_{};
+  bool completed_{};
 };

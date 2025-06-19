@@ -3662,6 +3662,7 @@ int CEXEBuild::doCommand(int which_token, LineParser &line)
           } else if (!_tcsicmp(line.gettoken_str(a), _T("/end"))) {
             file_7z_end = true;
             a++;
+            //return PS_FILE_END;
           }
         }
         if (!_tcsicmp(line.gettoken_str(a),_T("/nonfatal")))
@@ -3705,7 +3706,7 @@ int CEXEBuild::doCommand(int which_token, LineParser &line)
           }
           int v=do_add_file(fn, attrib, 0, &tf, on,1,0, excluded, std::wstring(L""), false, file_7z);
           if (file_7z) {
-            return file_7z_end? PS_FILE_END : PS_OK;
+            return file_7z_end ? (v == PS_OK ? PS_FILE_END : v) : v;
           }
           if (v != PS_OK) return v;
           if (tf > 1) PRINTHELP()
@@ -3771,7 +3772,7 @@ int CEXEBuild::doCommand(int which_token, LineParser &line)
           TCHAR *fn = my_convert(t);
           int v=do_add_file(fn, attrib, rec, &tf, NULL, which_token == TOK_FILE, NULL, excluded,std::wstring(L""), false, file_7z);
           if (file_7z) {
-            return file_7z_end ? PS_FILE_END : PS_OK;
+            return file_7z_end ? (v == PS_OK ? PS_FILE_END : v) : v;
           }
           my_convert_free(fn);
           if (v != PS_OK) return v;
@@ -5252,9 +5253,9 @@ int CEXEBuild::doCommand(int which_token, LineParser &line)
 int CEXEBuild::do_add_7zfile(const tstring& path, const tstring& oname, int recurse, const std::set<tstring>& excluded) {
   int size{};
   if (oname.empty()) {
-    size = file_7z_.AddSrcFile(path, recurse, excluded);
+    size = file_7z_.AddSrcFile(this, path, recurse, excluded);
   } else {
-    size = file_7z_.AddSrcFile(path, oname);
+    size = file_7z_.AddSrcFile(this, path, oname);
   }
   if (size <= 0) {
     return PS_ERROR;

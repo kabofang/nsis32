@@ -422,16 +422,19 @@ int CEXEBuild::pp_insertmacro(LineParser&line)
   m_currentmacroname = macroname;
   definedlist.set(_T("__MACRO__"), m_currentmacroname);
   int lp = 0;
+  int last_return = PS_OK;
   while (*t)
   {
     lp++;
     if (_tcscmp(t, _T(" ")))
     {
       int ret = process_oneline(t, str, lp, PLF_MACRO);
-      if (ret != PS_OK)
+      if (ret != PS_OK && ret != PS_FILE_END)
       {
         ERROR_MSG(_T("Error in macro %") NPRIs _T(" on macroline %d\n"), macroname, lp);
         return ret;
+      } else if (ret == PS_FILE_END) {
+        last_return = PS_FILE_END;
       }
     }
     {
@@ -458,7 +461,7 @@ int CEXEBuild::pp_insertmacro(LineParser&line)
   inside_comment = oldparserinsidecomment;
   --g_insertmacrorecursion;
   SCRIPT_MSG(_T("!insertmacro: end of %") NPRIs _T("\n"), macroname);
-  return PS_OK;
+  return last_return;
 }
 
 int CEXEBuild::pp_tempfile(LineParser&line)

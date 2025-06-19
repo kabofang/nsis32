@@ -34,8 +34,12 @@ wchar_t* File7z::GetInstall7zName() {
   return const_cast<wchar_t*>(install7z_name.c_str());
 }
 
-int File7z::AddSrcFile(const tstring& path, int recurse, const std::set<tstring>& excluded) {
+int File7z::AddSrcFile(CEXEBuild* build, const tstring& path, int recurse, const std::set<tstring>& excluded) {
   CHECK_FILE7Z_VALID(is_valid_);
+  if (completed_) {
+    build->ERROR_MSG(_T("XNSIS: AddSrcFile failed because of done, %")NPRIs _T("\n"), path.c_str());
+    return 0;
+  }
   DWORD file_size1 = GetFileSizeWrapper(tar_path_);
   tstring cmd = tstring(_T("a"));
   if (recurse) {
@@ -46,7 +50,7 @@ int File7z::AddSrcFile(const tstring& path, int recurse, const std::set<tstring>
   }
   cmd = cmd + _T(" \"") + tar_path_ + _T("\"");
   cmd = cmd + _T(" \"") + path + _T("\"");
-  if (!SyncCall7zSync(cmd)) {
+  if (!SyncCall7zSync(cmd, build)) {
     return 0;
   }
   ++count_;
@@ -55,15 +59,21 @@ int File7z::AddSrcFile(const tstring& path, int recurse, const std::set<tstring>
   return file_size2 - file_size1;
 }
 
-int File7z::AddSrcFile(const tstring& path, const tstring& oname) {
+int File7z::AddSrcFile(CEXEBuild* build, const tstring& path, const tstring& oname) {
   CHECK_FILE7Z_VALID(is_valid_);
+  if (completed_) {
+    build->ERROR_MSG(_T("XNSIS: AddSrcFile failed because of done, %")NPRIs _T("\n"), path.c_str());
+    return 0;
+  }
   int file_size = GetCommonFileSize(path.c_str());
   if (file_size < 0) {
     return 0;
   }
   if (WonameCopy(path.c_str(), (xnsis_path_ + _T("\\") + oname).c_str()) != 0) {
+    build->ERROR_MSG(_T("XNSIS: WonameCopy failed, %") NPRIs _T(", %") NPRIs _T("\n"), path.c_str(), (xnsis_path_ + _T("\\") + oname).c_str());
     return 0;
   }
+  ++count_;
   file_size = file_size ? file_size : 1;
   return file_size;
 }
@@ -74,14 +84,14 @@ bool File7z::GenerateInstall7z(CEXEBuild* build,int& build_compress) {
     return true;
   }
   count_ = 0;
-
+  completed_ = true;
   tstring tar_other_cmd = tstring(_T("a -sdel ")) + L" \"" + tar_path_ + _T("\" \"") + xnsis_path_ + _T("\\*\"") + _T(" -x!") + tar_name;
-  if (!SyncCall7zSync(tar_other_cmd)) {
+  if (!SyncCall7zSync(tar_other_cmd, build)) {
     return false;
   }
 
   tstring exctr_cmd = tstring(_T("x \"")) + tar_path_ + _T("\" -o\"") + xnsis_path_ + _T("\" -aos");
-  if (!SyncCall7zSync(exctr_cmd)) {
+  if (!SyncCall7zSync(exctr_cmd, build)) {
     return false;
   }
   DeleteFile(tar_path_.c_str());
@@ -94,14 +104,18 @@ bool File7z::GenerateInstall7z(CEXEBuild* build,int& build_compress) {
     tstring real_file_path = xnsis_path_ + _T("\\") + entrys[i].filename;
     tstring plugin_path = xnsis_path_ + _T("\\") + entrys[i].filename + L".nsisbin";
     tstring exctr_cmd = tstring(_T("x \"")) + real_file_path + _T("\" -o\"") + plugin_path + _T("\"");
-    if (!SyncCall7zSync(exctr_cmd)) {
+    if (!SyncCall7zSync(exctr_cmd, build)) {
       return false;
     }
-    DeleteFile(real_file_path.c_str());
-    exclude_param = exclude_param + L" -x!" + entrys[i].filename;
+    if (!WaitForDeleteFile(real_file_path.c_str(), 5000)) {
+      build->ERROR_MSG(_T("XNSIS: Can't delete compressed file, %")NPRIs _T("\n"), real_file_path.c_str());
+      return false;
+    }
+    //DeleteFile(real_file_path.c_str());
+    //exclude_param = exclude_param + L" -x!" + entrys[i].filename;
   }
   tstring compress_cmd = tstring(_T("a ")) + param_7z_cmd_.c_str() + exclude_param + L" \"" + install7z_path_ + _T("\" \"") + xnsis_path_ + _T("\\*\"");
-  if (!SyncCall7zSync(compress_cmd)) {
+  if (!SyncCall7zSync(compress_cmd, build)) {
     return false;
   }
   auto exec_script = [build](const tstring& cmd) {
