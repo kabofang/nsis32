@@ -29,31 +29,14 @@
 #include "resource.h"
 #include "api.h"
 #include "../tchar.h"
-#include "../../Contrib/7-Zip/Contrib/nsis7z/CPP/7zip/UI/NSIS/Extract7z.h"
-#include "../../Contrib/7-Zip/Contrib/nsis7z/CPP/7zip/UI/Console/Console7zMain.h"
-#include "../plugin_parse.h"
+#include "../../Contrib/nsispack/src/install.h"
 
 TCHAR* install7z_name = NULL;
-BOOL EndsWithInstall7z(const TCHAR* buf0) {
-  if (install7z_name == NULL) {
-    return FALSE;
-  }
-  const TCHAR* suffix = install7z_name;
-  size_t buf_len = _tcslen(buf0);
-  size_t suffix_len = _tcslen(suffix);
+BOOL g_install_context_inited_ = FALSE;
+InstallContext g_install_context;
 
-  if (buf_len >= suffix_len) {
-    return (_tcsncmp(
-      buf0 + buf_len - suffix_len,
-      suffix,
-      suffix_len
-    ) == 0);
-  }
-  return FALSE;
-}
-
-BOOL EndsWithPluginIni(const TCHAR* buf0) {
-  const TCHAR* suffix = _T("plugin_compress.ini");
+BOOL IsDistInfo(const TCHAR* buf0) {
+  const TCHAR* suffix = g_dist_info_name;
   size_t buf_len = _tcslen(buf0);
   size_t suffix_len = _tcslen(suffix);
 
@@ -556,20 +539,12 @@ static int NSISCALL ExecuteEntry(entry *entry_, HWND hwndProgress)
       }
       if (parm1)
       {
-        while (!install7z_name) {
-          wchar_t* name = GetStringFromParm(0x05);
-          if (name == NULL) {
-            break;
-          }
-          int lenth = mystrlen(name);
-          if (lenth == 0) {
-            break;
-          }
-          install7z_name = malloc((lenth + 1) * sizeof(wchar_t));
-          memset(install7z_name, 0, (lenth + 1)* sizeof(wchar_t));
-          memcpy(install7z_name, name, lenth * sizeof(wchar_t));
-          break;
+        if (!g_install_context_inited_) {
+          memset(&g_install_context, 0, sizeof(g_install_context));
+          g_install_context.hwnd = hwndProgress;
+          g_install_context_inited_ = TRUE;
         }
+        SetCurrentRealOutDir(&g_install_context, buf1);
         update_status_text_buf1(LANG_OUTPUTDIR);
         mystrcpy(state_output_directory,buf1);
         if (!SetCurrentDirectory(buf1))
@@ -751,31 +726,9 @@ static int NSISCALL ExecuteEntry(entry *entry_, HWND hwndProgress)
 
         FlushFileBuffers(hOut);
         CloseHandle(hOut);
-        if (EndsWithInstall7z(buf0)) {
-          int dir_lenth = mystrlen(buf0) - mystrlen(install7z_name) + 1;
-          wchar_t* dst_path = malloc(dir_lenth * sizeof(wchar_t));
-          memset(dst_path, 0, dir_lenth * sizeof(wchar_t));
-          memcpy(dst_path, buf0, (dir_lenth - 1) * sizeof(wchar_t));
-          Extract7z(buf0, dst_path, hwndProgress,kExtract7z);
-          DeleteFile(buf0);
-        }
-        else if (EndsWithPluginIni(buf0)) {
-          struct CompressPluginEntry entrys[MAX_ENTRIES];
-          int count = parse_plugin_compress_file(buf0, (struct CompressPluginEntry*)entrys);
-          int dir_lenth = mystrlen(buf0) - mystrlen(L"plugin_compress.ini") + 1;
-          wchar_t* full_path = malloc(dir_lenth * sizeof(wchar_t));
-          memset(full_path, 0, dir_lenth * sizeof(wchar_t));
-          memcpy(full_path, buf0, (dir_lenth - 1) * sizeof(wchar_t));
-          for (int i = 0;i < count;++i) {
-            wchar_t dst_path[512] = {};
-            wsprintf(dst_path, L"%s%s%s", full_path, entrys[i].filename, L".nsisbin\\.\\");
-            wchar_t cmd[1024] = {};
-            wsprintf(cmd, L"7z a %s \"%s%s\" \"%s\"", entrys[i].args, full_path, entrys[i].filename, dst_path);
-            Main2CustomNoExcept(1, (char**)cmd);
-            DeleteDirectoryRecursive(dst_path);
-            OnInstallProgress(hwndProgress, kPluginCompress, i, count);
-          }
-          DeleteFile(buf0);
+        if(IsDistInfo(buf0)){
+          InstallContext_Init(&g_install_context, buf0);
+          ExtractInstall7z(&g_install_context);
         }
         if (ret < 0)
         {

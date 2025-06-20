@@ -8,7 +8,9 @@ files = Split("""
 	Ui.c
 	util.c
 	#Source/crc32.c
-	#Source/plugin_parse.c
+	#Source/../Contrib/nsispack/src/install.c
+	#Source/../Contrib/nsispack/src/distinfo.c
+	#Source/../Contrib/nsispack/src/log.c
 """)
 
 files_7z = Split("""

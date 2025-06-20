@@ -30,9 +30,9 @@ makensis_files = Split("""
 	util.cpp
 	winchar.cpp
 	writer.cpp
-	file7z.cpp
-	file_utils.cpp
-	plugin_parse.c
+	#Source/../Contrib/nsispack/src/log.c
+	#Source/../Contrib/nsispack/src/distinfo.c
+	#Source/../Contrib/nsispack/src/pack.cpp
 """)
 
 bzip2_files = Split("""
@@ -62,6 +62,7 @@ libs = Split("""
 	oleaut32
 	version
 	shell32
+	advapi32
 """)
 
 Import('env AddAvailableLibs AddZLib')

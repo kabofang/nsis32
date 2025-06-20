@@ -34,11 +34,11 @@
 
 #include "exehead/fileform.h"
 #include "exehead/config.h"
-#include "file7z.h"
 
 #include "tstring.h"
 #include <set>
 #include <map>
+#include "../Contrib/nsispack/src/pack.h"
 
 #ifdef NSIS_SUPPORT_STANDARD_PREDEFINES
 // Added by Sunil Kamath 11 June 2003
@@ -446,7 +446,7 @@ class CEXEBuild {
     bool uninst_plugin_used;
     int build_plugin_unload; // TOK_SETPLUGINUNLOAD
 #endif //NSIS_CONFIG_PLUGIN_SUPPORT
-    File7z file_7z_;
+    PackInstall pack_install_;
     // build.cpp functions used mostly within build.cpp
     int datablock_optimize(int start_offset, int first_int);
     bool datablock_finddata(IMMap&mmap, int mmstart, int size, int*ofs);

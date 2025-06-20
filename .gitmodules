@@ -1,3 +1,6 @@
 [submodule "Contrib/7-Zip"]
 	path = Contrib/7-Zip
 	url = https://github.com/kabofang/nsis7z.git
+[submodule "Contrib/nsispack"]
+	path = Contrib/nsispack
+	url = https://github.com/kabofang/nsispack.git

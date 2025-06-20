@@ -723,9 +723,8 @@ if defenv['PLATFORM'] == 'win32':
 else:
 	defenv.DistributeBin(makensis, alias='install-compiler')
 
-defenv.DistributeW32Bin('#/Contrib/7zbin/7z.exe', names='7z.exe')
-defenv.DistributeW32Bin('#/Contrib/7zbin/config7z.ini', names='config7z.ini')
-defenv.DistributeW32Bin('#/Contrib/7zbin/plugin_compress.ini', names='plugin_compress.ini')
+defenv.DistributeW32Bin('#/Contrib/nsispack/7z.exe', names='7z.exe')
+defenv.DistributeW32Bin('#/Contrib/nsispack/config.ini', names='config.ini')
 
 ######################################################################
 #######  Plug-ins                                                  ###

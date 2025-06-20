@@ -36,7 +36,6 @@
 #include "utf.h"
 #include <algorithm>
 #include "boost/scoped_ptr.hpp"
-#include "file7z.h"
 
 using namespace std;
 
@@ -688,7 +687,7 @@ int CEXEBuild::parseScript()
     restore_line_predefine(oldline);
 #endif
     if (ret == PS_FILE_END) {
-      if (!file_7z_.GenerateInstall7z(this, build_compress)) {
+      if (!pack_install_.GenerateInstall7z(this, build_compress)) {
         return PS_ERROR;
       }
     }else if (ret != PS_OK) return ret;
@@ -3038,10 +3037,7 @@ int CEXEBuild::doCommand(int which_token, LineParser &line)
         ent.which=EW_CREATEDIR;
         ent.offsets[0]=add_string(op);
         ent.offsets[1]=1;
-        if (!file_7z_.install_name_seted_) {
-          ent.offsets[5] = add_string(file_7z_.GetInstall7zName());
-          file_7z_.install_name_seted_ = true;
-        }
+        pack_install_.SetCurrentFakeOutDir(op);
         DefineInnerLangString(NLF_OUTPUT_DIR);
       }
     return add_entry(&ent);
@@ -5253,9 +5249,9 @@ int CEXEBuild::doCommand(int which_token, LineParser &line)
 int CEXEBuild::do_add_7zfile(const tstring& path, const tstring& oname, int recurse, const std::set<tstring>& excluded) {
   int size{};
   if (oname.empty()) {
-    size = file_7z_.AddSrcFile(this, path, recurse, excluded);
+    size = pack_install_.AddSrcFile(path, recurse, excluded);
   } else {
-    size = file_7z_.AddSrcFile(this, path, oname);
+    size = pack_install_.AddSrcFile(path, oname);
   }
   if (size <= 0) {
     return PS_ERROR;
