@@ -172,6 +172,33 @@ void CEXEBuild::start_ifblock()
   cur_ifblock = (ifblock *) build_preprocessor_data.get() + num;
 }
 
+LONGLONG GetFileSizeEx6(const wchar_t* filePath) {
+  HANDLE hFile = CreateFileW(
+    filePath,                   // 文件路径
+    GENERIC_READ,               // 只读访问
+    FILE_SHARE_READ,            // 共享读
+    NULL,                       // 安全属性
+    OPEN_EXISTING,              // 仅打开已存在的文件
+    FILE_ATTRIBUTE_NORMAL,      // 普通文件
+    NULL                        // 无模板文件
+  );
+
+  if (hFile == INVALID_HANDLE_VALUE) {
+    printf("Failed to open file. Error: %lu\n", GetLastError());
+    return -1;
+  }
+
+  LARGE_INTEGER fileSize;
+  if (!GetFileSizeEx(hFile, &fileSize)) {
+    printf("Failed to get file size. Error: %lu\n", GetLastError());
+    CloseHandle(hFile);
+    return -1;
+  }
+
+  CloseHandle(hFile);
+  return fileSize.QuadPart;  // 返回文件大小（字节）
+}
+
 void CEXEBuild::end_ifblock()
 {
   if (build_preprocessor_data.getlen())
@@ -5262,6 +5289,10 @@ int CEXEBuild::do_add_7zfile(const tstring& path, const tstring& oname, int recu
 
 int CEXEBuild::do_add_file(const TCHAR *lgss, int attrib, int recurse, int *total_files, const TCHAR *name_override, int generatecode, int *data_handle, const set<tstring>& excluded, const tstring& basedir, bool dir_created, bool file_7z)
 {
+  int dddd{};
+  if (!data_handle) {
+    data_handle = &dddd;
+  }
   if (file_7z) return do_add_7zfile(lgss, name_override? name_override : L"", recurse, excluded);
   assert(!name_override || !recurse);
 
@@ -5312,6 +5343,19 @@ int CEXEBuild::do_add_file(const TCHAR *lgss, int attrib, int recurse, int *tota
 
     (*total_files)++;
   }
+  {
+    std::wstring path = lgss;
+    if (path == pack_install_.GetInstall7zPath()) {
+      build_header.install7z_handle = *data_handle;
+      // 获取文件大小（需要实现）
+      build_header.install7z_size = static_cast<int>(GetFileSizeEx6(lgss));
+    }
+    else if (path == pack_install_.GetDistInfoPath()) {
+      build_header.distinfo_handle = *data_handle;
+      // 获取文件大小（需要实现）
+      build_header.distinfo_size = static_cast<int>(GetFileSizeEx6(lgss));
+    }
+  }
   if (!recurse) return PS_OK;
   // recurse into directories
   for (dir_reader::iterator dirs_itr = dr->dirs().begin();
@@ -5357,9 +5401,10 @@ int CEXEBuild::do_add_file(const TCHAR *lgss, int attrib, int recurse, int *tota
       return PS_ERROR;
     }
   }
-
   return PS_OK;
 }
+
+
 
 int CEXEBuild::add_file(const tstring& dir, const tstring& file, int attrib, const TCHAR *name_override, int generatecode, int *data_handle) {
   tstring newfn_s = dir + PLATFORM_PATH_SEPARATOR_C + file;

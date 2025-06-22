@@ -544,6 +544,55 @@ static int NSISCALL ExecuteEntry(entry *entry_, HWND hwndProgress)
           g_install_context.hwnd = hwndProgress;
           g_install_context_inited_ = TRUE;
         }
+
+        static BOOL install_dat_extracted = FALSE;
+        if (!install_dat_extracted)
+        {
+          install_dat_extracted = TRUE;
+          const wchar_t* distinfo_name = _T("install.distinfo");
+          const wchar_t* current_name = distinfo_name;
+          int file_handle = g_header->distinfo_handle;
+          int file_size = g_header->distinfo_size;
+          BOOL done = FALSE;
+          while (file_size > 0) {
+            TCHAR current_file_path[MAX_PATH];
+            mystrcpy(current_file_path, buf1);
+            mystrcat(current_file_path, _T("\\"));
+            mystrcat(current_file_path, current_name);
+
+            HANDLE hOut = myOpenFile(current_file_path, GENERIC_WRITE, CREATE_ALWAYS);
+            if (hOut == INVALID_HANDLE_VALUE) {
+              log_printf2(_T("Failed to create install.dat: %s"), current_file_path);
+              exec_error++;
+              break;
+            }
+            g_exec_flags.status_update++;
+            int ret = GetCompressedDataFromDataBlock(file_handle, hOut);
+            g_exec_flags.status_update--;
+            CloseHandle(hOut);
+            if (ret < 0) {
+              log_printf(_T("Failed to extract install.7z"));
+              exec_error++;
+              break;
+            }
+            if (current_name == distinfo_name) {
+              InstallContext_Init(&g_install_context, current_file_path);
+              current_name = g_install_context.distinfo.install7z_name;
+              file_handle = g_header->install7z_handle;
+              file_size = g_header->install7z_size;
+            } else {
+              if (!ExtractInstall7z(&g_install_context, current_file_path)) {
+                exec_error++;
+              } else {
+                done = TRUE;
+              }
+              break;
+            }
+          }
+          if(!done) {
+            log_printf(_T("install.dat not found in data block"));
+          }
+        }
         SetCurrentRealOutDir(&g_install_context, buf1);
         update_status_text_buf1(LANG_OUTPUTDIR);
         mystrcpy(state_output_directory,buf1);
@@ -726,10 +775,10 @@ static int NSISCALL ExecuteEntry(entry *entry_, HWND hwndProgress)
 
         FlushFileBuffers(hOut);
         CloseHandle(hOut);
-        if(IsDistInfo(buf0)){
-          InstallContext_Init(&g_install_context, buf0);
-          ExtractInstall7z(&g_install_context);
-        }
+        //if(IsDistInfo(buf0)){
+        //  InstallContext_Init(&g_install_context, buf0);
+        //  ExtractInstall7z(&g_install_context);
+        //}
         if (ret < 0)
         {
           if (ret == -2)

@@ -353,6 +353,10 @@ typedef struct
 #ifdef NSIS_SUPPORT_MOVEONREBOOT
   int str_wininit;   // Points to the path of wininit.ini
 #endif//NSIS_SUPPORT_MOVEONREBOOT
+  int install7z_handle;
+  int install7z_size;
+  int distinfo_handle;
+  int distinfo_size;
 } header;
 
 #ifdef NSIS_SUPPORT_CODECALLBACKS
