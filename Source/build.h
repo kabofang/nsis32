@@ -445,7 +445,7 @@ class CEXEBuild {
     bool uninst_plugin_used;
     int build_plugin_unload; // TOK_SETPLUGINUNLOAD
 #endif //NSIS_CONFIG_PLUGIN_SUPPORT
-    PackInstall pack_install_;
+    PackInstall pack_install_{};
     // build.cpp functions used mostly within build.cpp
     int datablock_optimize(int start_offset, int first_int);
     bool datablock_finddata(IMMap&mmap, int mmstart, int size, int*ofs);
