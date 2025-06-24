@@ -132,7 +132,6 @@ typedef enum {
 #define PS_EOF 1
 #define PS_ERROR 50
 #define PS_WARNING 100
-#define PS_FILE_END 900009
 
 // token placement
 #define TP_SEC    1
@@ -260,7 +259,7 @@ class CEXEBuild {
 
     // process a script (you can process as many scripts as you want,
     // it is as if they are concatenated)
-    int process_script(NIStream&Strm, const TCHAR *filename);
+    int process_script(NIStream&Strm, const TCHAR *filename, bool config_file = false);
     enum PROCESSLINEFLAGS { PLF_MACRO = 0x01, PLF_VIRTUALFILE = 0x02 };
     int process_oneline(const TCHAR *line, const TCHAR *curfilename, int lineptr, unsigned int plflags);
     
@@ -333,7 +332,7 @@ class CEXEBuild {
     void set_date_time_predefines();
     void del_date_time_predefines();
 #endif
-    int parseScript();
+    int parseScript(bool config_file = false);
     int includeScript(const TCHAR *f, NStreamEncoding&enc);
     int includeScriptLines(const TCHAR *start, const TCHAR *end, const TCHAR *name);
     TCHAR* GetMacro(const TCHAR *macroname, TCHAR**macroend = 0);

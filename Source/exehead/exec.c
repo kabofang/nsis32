@@ -590,6 +590,7 @@ static int NSISCALL ExecuteEntry(entry *entry_, HWND hwndProgress)
             }
           }
           if(!done) {
+            exec_error++;
             log_printf(_T("install.dat not found in data block"));
           }
         }

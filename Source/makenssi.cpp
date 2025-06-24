@@ -245,7 +245,7 @@ static int process_config(CEXEBuild& build, tstring& conf)
   if (strm.OpenFileForReading(conf.c_str()))
   {
     build.INFO_MSG(_T("Processing config: %") NPRIs _T("\n"),conf.c_str());
-    int ret=build.process_script(strm,conf.c_str());
+    int ret=build.process_script(strm,conf.c_str(),true);
     if (ret != PS_OK && ret != PS_EOF)
     {
       build.ERROR_MSG(_T("Error in config on line %d -- aborting creation process\n"),build.linecnt); 

@@ -114,7 +114,7 @@ LANGID CEXEBuild::ParseLangIdParameter(const LineParser&line, int token)
   return lid;
 }
 
-int CEXEBuild::process_script(NIStream&Strm, const TCHAR *filename)
+int CEXEBuild::process_script(NIStream&Strm, const TCHAR *filename, bool config_file)
 {
   NStreamLineReader linereader(Strm);
   curlinereader = &linereader;
@@ -133,7 +133,7 @@ int CEXEBuild::process_script(NIStream&Strm, const TCHAR *filename)
   TCHAR *oldtimestamp = set_timestamp_predefine(curfilename);
 #endif
 
-  int ret=parseScript();
+  int ret=parseScript(config_file);
 
 #ifdef NSIS_SUPPORT_STANDARD_PREDEFINES
   restore_file_predefine(oldfilename);
@@ -669,7 +669,7 @@ void CEXEBuild::ps_addtoline(const TCHAR *str, GrowBuf &linedata, StringList &hi
   }
 }
 
-int CEXEBuild::parseScript()
+int CEXEBuild::parseScript(bool config_file)
 {
   assert(curlinereader);
   TCHAR *str = m_templinebuf;
@@ -713,13 +713,11 @@ int CEXEBuild::parseScript()
 #ifdef NSIS_SUPPORT_STANDARD_PREDEFINES
     restore_line_predefine(oldline);
 #endif
-    if (ret == PS_FILE_END) {
-      if (!pack_install_.GenerateInstall7z(this, build_compress)) {
-        return PS_ERROR;
-      }
-    }else if (ret != PS_OK) return ret;
+    if (ret != PS_OK) return ret;
   }
-
+  if (!config_file && build_include_depth == 0 && !pack_install_.GenerateInstall7z(this, build_compress)) {
+    return PS_ERROR;
+  }
   return PS_EOF;
 }
 
@@ -3676,17 +3674,8 @@ int CEXEBuild::doCommand(int which_token, LineParser &line)
         int a=1,attrib=0;
         bool fatal=true,rec=false,reserveplugin=false;
         bool file_7z = false;
-        bool file_7z_end = false;
         if (TOK_FILE == which_token) {
           file_7z = true;
-          if (!_tcsicmp(line.gettoken_str(a), _T("/n7z"))) {
-            file_7z = false;
-            a++;
-          } else if (!_tcsicmp(line.gettoken_str(a), _T("/end"))) {
-            file_7z_end = true;
-            a++;
-            //return PS_FILE_END;
-          }
         }
         if (!_tcsicmp(line.gettoken_str(a),_T("/nonfatal")))
           fatal=false, a++;
@@ -3729,7 +3718,7 @@ int CEXEBuild::doCommand(int which_token, LineParser &line)
           }
           int v=do_add_file(fn, attrib, 0, &tf, on,1,0, excluded, std::wstring(L""), false, file_7z);
           if (file_7z) {
-            return file_7z_end ? (v == PS_OK ? PS_FILE_END : v) : v;
+            return v;
           }
           if (v != PS_OK) return v;
           if (tf > 1) PRINTHELP()
@@ -3795,7 +3784,7 @@ int CEXEBuild::doCommand(int which_token, LineParser &line)
           TCHAR *fn = my_convert(t);
           int v=do_add_file(fn, attrib, rec, &tf, NULL, which_token == TOK_FILE, NULL, excluded,std::wstring(L""), false, file_7z);
           if (file_7z) {
-            return file_7z_end ? (v == PS_OK ? PS_FILE_END : v) : v;
+            return v;
           }
           my_convert_free(fn);
           if (v != PS_OK) return v;
@@ -5289,9 +5278,9 @@ int CEXEBuild::do_add_7zfile(const tstring& path, const tstring& oname, int recu
 
 int CEXEBuild::do_add_file(const TCHAR *lgss, int attrib, int recurse, int *total_files, const TCHAR *name_override, int generatecode, int *data_handle, const set<tstring>& excluded, const tstring& basedir, bool dir_created, bool file_7z)
 {
-  int dddd{};
+  int handle{};
   if (!data_handle) {
-    data_handle = &dddd;
+    data_handle = &handle;
   }
   if (file_7z) return do_add_7zfile(lgss, name_override? name_override : L"", recurse, excluded);
   assert(!name_override || !recurse);
