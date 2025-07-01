@@ -111,6 +111,8 @@ bool File7z::GenerateInstall7z(CEXEBuild* build,int& build_compress) {
       build->ERROR_MSG(_T("XNSIS: Can't delete compressed file, %")NPRIs _T("\n"), real_file_path.c_str());
       return false;
     }
+    std::wstring new_file_path = real_file_path + _T("tmp");
+    MoveFileW(real_file_path.c_str(), new_file_path.c_str());
     //DeleteFile(real_file_path.c_str());
     //exclude_param = exclude_param + L" -x!" + entrys[i].filename;
   }
